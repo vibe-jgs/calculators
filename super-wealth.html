@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Wealth Calculator | Australian Tax, Super & Div 293 — FY 2025-26</title>
+  <meta name="description" content="Calculate your Australian income tax, Super Guarantee, Medicare Levy, and Division 293 tax for FY 2025-26. Supports RSU vesting, capital gains with 50% CGT discount, and private health insurance surcharge.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self';">
+  <script src="theme-init.js"></script>
+</head>
+<body>
+
+  <!-- Animated background -->
+  <div class="bg-glow bg-glow--1"></div>
+  <div class="bg-glow bg-glow--2"></div>
+  <div class="bg-glow bg-glow--3"></div>
+
+  <div class="container">
+
+    <!-- Header -->
+    <header class="header" id="header">
+      <a href="index.html" style="color: var(--text-muted); text-decoration: none; font-weight: 600; font-size: 0.9rem; display: inline-block; margin-bottom: var(--space-lg);">&larr; Back to Home</a>
+      <div class="header__badge">FY 2025–26</div>
+      <h1 class="header__title">Super Wealth <span>Calculator</span></h1>
+      <p class="header__subtitle">Australian Income Tax · Super Guarantee · Division 293</p>
+
+      <!-- Theme Switcher -->
+      <div class="theme-switcher" id="themeSwitcher" role="radiogroup" aria-label="Theme preference">
+        <button type="button" class="theme-switcher__btn" data-theme="light" role="radio" aria-checked="false" title="Light mode">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <span>Light</span>
+        </button>
+        <button type="button" class="theme-switcher__btn" data-theme="system" role="radio" aria-checked="true" title="System preference">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          <span>System</span>
+        </button>
+        <button type="button" class="theme-switcher__btn" data-theme="dark" role="radio" aria-checked="false" title="Dark mode">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <span>Dark</span>
+        </button>
+        <div class="theme-switcher__indicator" id="themeIndicator"></div>
+      </div>
+    </header>
+
+    <main>
+
+      <!-- ─── Input Section ─── -->
+      <section class="card card--input" id="inputSection">
+        <div class="card__header">
+          <div class="card__icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <h2 class="card__title">Income Details</h2>
+        </div>
+
+        <form id="taxForm" autocomplete="off">
+          <!-- Base Pay -->
+          <div class="field" id="field-basePay">
+            <label class="field__label" for="basePay">Base Pay (Gross Salary)</label>
+            <div class="field__input-wrap">
+              <span class="field__prefix">$</span>
+              <input type="text" id="basePay" class="field__input" placeholder="0" value="0" inputmode="numeric" required>
+            </div>
+            <span class="field__helper">Salary on which your employer has withheld PAYG tax</span>
+          </div>
+
+          <!-- RFBA -->
+          <div class="field" id="field-rfba">
+            <label class="field__label" for="rfbaValue">Reportable Fringe Benefits (RFBA)</label>
+            <div class="field__input-wrap">
+              <span class="field__prefix">$</span>
+              <input type="text" id="rfbaValue" class="field__input" placeholder="0" value="0" inputmode="numeric" required>
+            </div>
+            <span class="field__helper">Grossed-up value of fringe benefits (Used for MLS & Div 293 tests, but not Income Tax)</span>
+          </div>
+
+          <!-- RSU -->
+          <div class="field" id="field-rsu">
+            <label class="field__label" for="rsuValue">RSU Vested Value</label>
+            <div class="field__input-wrap">
+              <span class="field__prefix">$</span>
+              <input type="text" id="rsuValue" class="field__input" placeholder="0" value="0" inputmode="numeric" required>
+            </div>
+            <span class="field__helper">Value of Restricted Stock Units vested this year — deferred on payment summary, no tax withheld</span>
+          </div>
+
+          <!-- Capital Gains -->
+          <div class="field" id="field-cgt">
+            <label class="field__label" for="capitalGains">Capital Gains</label>
+            <div class="field__input-wrap">
+              <span class="field__prefix">$</span>
+              <input type="text" id="capitalGains" class="field__input" placeholder="0" value="0" inputmode="numeric" required>
+            </div>
+            <span class="field__helper">Total capital gains accrued during the financial year</span>
+          </div>
+
+          <!-- Carry Forward Super -->
+          <div class="field" id="field-carryForward">
+            <label class="field__label" for="carryForward">Unused Carry Forward Super Balance</label>
+            <div class="field__input-wrap">
+              <span class="field__prefix">$</span>
+              <input type="text" id="carryForward" class="field__input" placeholder="0" value="0" inputmode="numeric" required>
+            </div>
+            <span class="field__helper">Enter any unused concessional cap amounts accrued from the last 5 years. (Your standard $30,000 cap is applied automatically).</span>
+          </div>
+
+          <!-- Extra Super Contribution -->
+          <div class="field" id="field-extraSuper">
+            <label class="field__label" for="extraSuper">Extra Super Contribution (Option 1)</label>
+            <div class="field__input-wrap">
+              <span class="field__prefix">$</span>
+              <input type="text" id="extraSuper" class="field__input" placeholder="0" value="0" inputmode="numeric" required>
+            </div>
+            <span class="field__helper">Enter the amount of personal deductible contribution you plan to make.</span>
+          </div>
+
+          <!-- Extra Super Contribution 2 -->
+          <div class="field" id="field-extraSuper2">
+            <label class="field__label" for="extraSuper2">Extra Super Contribution (Option 2)</label>
+            <div class="field__input-wrap">
+              <span class="field__prefix">$</span>
+              <input type="text" id="extraSuper2" class="field__input" placeholder="0" value="0" inputmode="numeric" required>
+            </div>
+            <span class="field__helper">Enter a second amount to compare scenarios side-by-side.</span>
+          </div>
+
+          <!-- Toggles -->
+          <div class="toggles">
+            <div class="toggle-row" id="toggle-cgt">
+              <div class="toggle-row__text">
+                <span class="toggle-row__label">50% CGT Discount Eligible</span>
+                <span class="toggle-row__helper">Assets held longer than 12 months</span>
+              </div>
+              <button type="button" class="toggle" id="cgtDiscount" role="switch" aria-checked="false">
+                <span class="toggle__track">
+                  <span class="toggle__thumb"></span>
+                </span>
+              </button>
+            </div>
+
+            <div class="toggle-row" id="toggle-phi">
+              <div class="toggle-row__text">
+                <span class="toggle-row__label">Private Health Insurance</span>
+                <span class="toggle-row__helper">Held an appropriate level of cover for the full year</span>
+              </div>
+              <button type="button" class="toggle" id="privateHealth" role="switch" aria-checked="true">
+                <span class="toggle__track">
+                  <span class="toggle__thumb"></span>
+                </span>
+              </button>
+            </div>
+          </div>
+
+        </form>
+      </section>
+
+      <!-- ─── Results Section ─── -->
+      <section class="results" id="results">
+        
+        <!-- Master Dashboard Card -->
+        <div class="card card--result card--dashboard card--wide" id="card-dashboard" style="--accent: #38bdf8;">
+          <div class="card__header" style="justify-content: center; text-align: center;">
+            <h3 class="card__title" style="font-size: 1.5rem; width: 100%;">Tax & Super Strategy Dashboard</h3>
+          </div>
+          <div class="card__body" id="dashboardSummary"></div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer style="text-align: center; padding: var(--space-xl) 0; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border-subtle); margin-top: var(--space-xl);">
+      <p style="margin-bottom: var(--space-md);">This calculator is for informational purposes only and does not constitute financial advice. <br>Always consult a registered tax agent. | <a href="privacy.html" style="color: var(--text-muted); text-decoration: underline;">Privacy Policy</a></p>
+      <button id="clearDataBtn" class="btn-clear-data">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+        Clear My Data & Reset
+      </button>
+      <p class="footer__copy" style="margin-top: var(--space-md);">Super Wealth Calculator © 2026</p>
+    </footer>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" aria-hidden="true">
+    <div class="toast__content">
+      <div class="toast__icon">ℹ️</div>
+      <div class="toast__text">
+        <h4 id="toastTitle">Contribution Split</h4>
+        <p id="toastMessage">Your contribution was split.</p>
+      </div>
+      <button class="toast__close" id="toastClose" aria-label="Close notification">&times;</button>
+    </div>
+  </div>
+
+  <script src="app.js?v=3"></script>
+</body>
+</html>
