@@ -519,11 +519,13 @@ function renderComparisonDashboard(base, opt, opt2) {
   const baseNetSuper = base.superResult.amount - Math.round(base.superResult.amount * 0.15) - base.div293.tax;
   
   const optTotalSuper = base.superResult.amount + opt.extraContrib;
-  const optNetSuper = optTotalSuper - Math.round(optTotalSuper * 0.15) - opt.div293.tax;
+  const optConcessionalTotal = base.superResult.amount + opt.concessionalExtra;
+  const optNetSuper = optTotalSuper - Math.round(optConcessionalTotal * 0.15) - opt.div293.tax;
   const netOnlyExtraSuper = optNetSuper - baseNetSuper;
 
   const opt2TotalSuper = base.superResult.amount + opt2.extraContrib;
-  const opt2NetSuper = opt2TotalSuper - Math.round(opt2TotalSuper * 0.15) - opt2.div293.tax;
+  const opt2ConcessionalTotal = base.superResult.amount + opt2.concessionalExtra;
+  const opt2NetSuper = opt2TotalSuper - Math.round(opt2ConcessionalTotal * 0.15) - opt2.div293.tax;
   const netOnlyExtraSuper2 = opt2NetSuper - baseNetSuper;
 
   const showCol3 = opt2.extraContrib > 0;
