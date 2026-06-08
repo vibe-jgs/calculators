@@ -134,7 +134,7 @@ setupToggle(phiToggle);
 // ── State Persistence ──────────────────────────
 const STATE_KEY = 'swc-input-state';
 
-function saveState() {
+async function saveState() {
   try {
     const state = {
       basePay: parseInputValue(basePayInput),
@@ -147,31 +147,37 @@ function saveState() {
       cgtDiscount: cgtToggle.getAttribute('aria-checked') === 'true',
       privateHealth: phiToggle.getAttribute('aria-checked') === 'true',
     };
-    localStorage.setItem(STATE_KEY, JSON.stringify(state));
-  } catch (e) {
-    // Ignore localStorage security errors (e.g., in file:/// protocol)
-  }
+    if (typeof encryptState === 'function') {
+      const encrypted = await encryptState(state);
+      if (encrypted) localStorage.setItem(STATE_KEY, JSON.stringify(encrypted));
+    }
+  } catch (e) {}
 }
 
-function loadState() {
+async function loadState() {
   try {
     const saved = localStorage.getItem(STATE_KEY);
     if (saved) {
-      const state = JSON.parse(saved);
-      if (state.basePay) basePayInput.value = state.basePay.toLocaleString('en-AU');
-      if (state.rfba && rfbaInput) rfbaInput.value = state.rfba.toLocaleString('en-AU');
-      if (state.rsuValue) rsuInput.value = state.rsuValue.toLocaleString('en-AU');
-      if (state.capitalGains) cgtInput.value = state.capitalGains.toLocaleString('en-AU');
-      if (state.carryForward) carryForwardInput.value = state.carryForward.toLocaleString('en-AU');
-      if (state.extraSuper) extraSuperInput.value = state.extraSuper.toLocaleString('en-AU');
-      if (state.extraSuper2 && extraSuperInput2) extraSuperInput2.value = state.extraSuper2.toLocaleString('en-AU');
+      const encryptedObj = JSON.parse(saved);
+      let state = null;
+      if (typeof decryptState === 'function') {
+        state = await decryptState(encryptedObj);
+      }
       
-      if (state.cgtDiscount !== undefined) cgtToggle.setAttribute('aria-checked', state.cgtDiscount);
-      if (state.privateHealth !== undefined) phiToggle.setAttribute('aria-checked', state.privateHealth);
+      if (state) {
+        if (state.basePay) basePayInput.value = state.basePay.toLocaleString('en-AU');
+        if (state.rfba && rfbaInput) rfbaInput.value = state.rfba.toLocaleString('en-AU');
+        if (state.rsuValue) rsuInput.value = state.rsuValue.toLocaleString('en-AU');
+        if (state.capitalGains) cgtInput.value = state.capitalGains.toLocaleString('en-AU');
+        if (state.carryForward) carryForwardInput.value = state.carryForward.toLocaleString('en-AU');
+        if (state.extraSuper) extraSuperInput.value = state.extraSuper.toLocaleString('en-AU');
+        if (state.extraSuper2 && extraSuperInput2) extraSuperInput2.value = state.extraSuper2.toLocaleString('en-AU');
+        
+        if (state.cgtDiscount !== undefined) cgtToggle.setAttribute('aria-checked', state.cgtDiscount);
+        if (state.privateHealth !== undefined) phiToggle.setAttribute('aria-checked', state.privateHealth);
+      }
     }
-  } catch (e) {
-    // Ignore parsing or localStorage errors
-  }
+  } catch (e) {}
 }
 
 
@@ -548,7 +554,7 @@ function renderComparisonDashboard(base, opt, opt2) {
         <td class="strategy-table__label">${createTooltip('Employer Super Guarantee (SG)', 'Mandatory 12% contribution paid by your employer based on your Base Pay.')}</td>
         <td class="strategy-table__col1">${formatCurrency(base.superResult.amount)}</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(base.superResult.amount)}</td>` : `<td class="strategy-table__col2" rowspan="8" style="vertical-align: middle; text-align: center; background: rgba(0,0,0,0.05); color: var(--text-muted);">
-          <strong>Option 1</strong><br><br>Enter an extra super<br>contribution in the form<br>to see a comparison.
+          Enter an extra super<br>contribution in the form<br>to see a comparison.
         </td>`}
         ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(base.superResult.amount)}</td>` : ''}
       </tr>
@@ -802,8 +808,10 @@ if (toastClose) {
 }
 
 // ── Initial Render ─────────────────────────────
-loadState();
-performCalculation();
+(async function init() {
+  await loadState();
+  performCalculation();
+})();
 
 // ── Clear Data Functionality ───────────────────
 const clearDataBtn = document.getElementById('clearDataBtn');

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy | Super Wealth Calculator</title>
+  
+  <!-- Security & Scripts -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self';">
+  <script src="theme-init.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    .privacy-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: var(--space-2xl) var(--space-lg);
+    }
+    .privacy-content h2 {
+      margin-top: var(--space-xl);
+      margin-bottom: var(--space-sm);
+      color: var(--gold-light);
+    }
+    .privacy-content p, .privacy-content ul {
+      margin-bottom: var(--space-md);
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+    .privacy-content ul {
+      padding-left: var(--space-lg);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Animated background -->
+  <div class="bg-glow bg-glow--1"></div>
+  <div class="bg-glow bg-glow--2"></div>
+  <div class="bg-glow bg-glow--3"></div>
+
+  <div class="container privacy-container">
+    
+    <header class="header" style="padding-bottom: var(--space-lg);">
+      <a href="index.html" style="color: var(--text-muted); text-decoration: none; font-weight: 600; font-size: 0.9rem; display: inline-block; margin-bottom: var(--space-lg);">&larr; Back to Calculator</a>
+      <h1 class="header__title" style="font-size: 2.5rem;">Privacy <span>Policy</span></h1>
+    </header>
+
+    <main class="card privacy-content">
+      <h2>1. Introduction</h2>
+      <p>The Super Wealth Calculator is committed to ensuring your privacy and protecting your personal financial information. This Privacy Policy outlines our compliance with the <strong>Australian Privacy Act 1988</strong> and the <strong>Australian Privacy Principles (APPs)</strong>.</p>
+
+      <h2>2. 100% Client-Side Architecture</h2>
+      <p>This application is engineered with a strict <strong>serverless, client-side architecture</strong>. This means:</p>
+      <ul>
+        <li>All calculations are performed locally within your own web browser.</li>
+        <li><strong>No financial data, personal information, or calculation results are ever transmitted to, collected by, or stored on our servers.</strong></li>
+        <li>You are not required to create an account, log in, or provide any identifying information (such as your name or email address) to use this tool, ensuring complete anonymity in compliance with APP 2.</li>
+      </ul>
+
+      <h2>3. Data at Rest & Local Storage</h2>
+      <p>To improve your user experience, the calculator uses your browser's <code>localStorage</code> to temporarily "remember" the numbers you input, so you don't have to retype them if you accidentally refresh the page.</p>
+      <ul>
+        <li><strong>Enterprise Encryption:</strong> Any financial data saved to your local storage is cryptographically encrypted using an <strong>ephemeral AES-GCM session key</strong>.</li>
+        <li><strong>Auto-Shredding:</strong> Because the decryption key is stored only in your active browser session, your saved data is permanently crypto-shredded and rendered unreadable the moment you close your browser tab.</li>
+      </ul>
+
+      <h2>4. Clearing Your Data</h2>
+      <p>You have full control over your local data. You can instantly wipe all saved configurations and encrypted data by clicking the <strong>"Clear My Data & Reset"</strong> button located in the footer of the calculator.</p>
+
+      <h2>5. Analytics and Tracking</h2>
+      <p>This website does not currently use cookies for tracking, nor do we employ third-party analytics scripts (such as Google Analytics) that monitor your behavior.</p>
+
+      <h2>6. Changes to this Policy</h2>
+      <p>If we introduce optional features that require data transmission in the future, we will update this policy and request your explicit consent before any data leaves your device.</p>
+    </main>
+
+    <footer style="text-align: center; padding: var(--space-xl) 0; color: var(--text-muted); font-size: 0.85rem; margin-top: var(--space-xl);">
+      <p>Super Wealth Calculator © 2026</p>
+    </footer>
+
+  </div>
+</body>
+</html>
