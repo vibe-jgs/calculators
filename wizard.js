@@ -44,6 +44,10 @@ function formatCurrency(value) {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 }
 
+function formatPercent(decimal, decimals = 1) {
+  return (decimal * 100).toFixed(decimals) + '%';
+}
+
 function parseInputValue(inputEl) {
   if (!inputEl) return 0;
   const raw = inputEl.value.replace(/[^0-9.]/g, '');
