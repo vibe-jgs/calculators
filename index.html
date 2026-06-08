@@ -9,20 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <script>
-    // Prevent flash of wrong theme
-    (function() {
-      try {
-        const saved = localStorage.getItem('swc-theme-preference') || 'system';
-        const resolved = saved === 'system'
-          ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
-          : saved;
-        document.documentElement.setAttribute('data-theme', resolved);
-      } catch (e) {
-        // localStorage not available on some file:// URIs
-      }
-    })();
-  </script>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self';">
+  <script src="theme-init.js"></script>
 </head>
 <body>
 
@@ -185,9 +173,13 @@
     </main>
 
     <!-- Footer -->
-    <footer class="footer">
-      <p>⚠️ This calculator provides estimates for FY 2025–26 only. It does not account for salary sacrifice, HECS/HELP debt, private rulings, or other offsets. Always consult a registered tax agent for personalised advice.</p>
-      <p class="footer__copy">Super Wealth Calculator © 2026</p>
+    <footer style="text-align: center; padding: var(--space-xl) 0; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border-subtle); margin-top: var(--space-xl);">
+      <p style="margin-bottom: var(--space-md);">This calculator is for informational purposes only and does not constitute financial advice. <br>Always consult a registered tax agent.</p>
+      <button id="clearDataBtn" class="btn-clear-data">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+        Clear My Data & Reset
+      </button>
+      <p class="footer__copy" style="margin-top: var(--space-md);">Super Wealth Calculator © 2026</p>
     </footer>
   </div>
 

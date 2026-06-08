@@ -804,3 +804,14 @@ if (toastClose) {
 // ── Initial Render ─────────────────────────────
 loadState();
 performCalculation();
+
+// ── Clear Data Functionality ───────────────────
+const clearDataBtn = document.getElementById('clearDataBtn');
+if (clearDataBtn) {
+  clearDataBtn.addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear all your saved financial data and reset the calculator?')) {
+      localStorage.clear();
+      window.location.reload();
+    }
+  });
+}
