@@ -24,6 +24,20 @@ const CONFIG = {
   ],
 };
 
+
+function createTooltip(title, text) {
+  if (!text) return title;
+  return `
+    <div style="display: flex; align-items: center; gap: 6px; position: relative;">
+      <span>${title}</span>
+      <div class="info-tooltip">
+        <span class="info-tooltip__icon">?</span>
+        <div class="info-tooltip__text">${text}</div>
+      </div>
+    </div>
+  `;
+}
+
 // ── Input Formatting ───────────────────────────
 function formatCurrency(value) {
   if (value === 0) return '$0';
@@ -377,7 +391,7 @@ function renderComparisonDashboard(base, opt, opt2, paygWithheld, sg, concCap, b
     </thead>
     <tbody>
       <tr>
-        <td class="strategy-table__label">Employer Super Guarantee (SG)<br><small style="font-weight:400;color:var(--text-muted)">12% of Base Pay</small></td>
+        <td class="strategy-table__label">${createTooltip('Employer Super Guarantee (SG)', 'Mandatory 12% contribution paid by your employer based on your Base Pay.')}</td>
         <td class="strategy-table__col1">${formatCurrency(sg)}</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(sg)}</td>` : `<td class="strategy-table__col2" rowspan="8" style="vertical-align: middle; text-align: center; background: rgba(0,0,0,0.05); color: var(--text-muted);">
           <strong>Option 1</strong><br><br>No extra contribution.
@@ -385,67 +399,67 @@ function renderComparisonDashboard(base, opt, opt2, paygWithheld, sg, concCap, b
         ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(sg)}</td>` : ''}
       </tr>
       <tr>
-        <td class="strategy-table__label">Additional Super Contribution</td>
+        <td class="strategy-table__label">${createTooltip('Additional Super Contribution', 'Voluntary extra super contributions you choose to make.')}</td>
         <td class="strategy-table__col1">$0</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight">+${formatCurrency(opt.extraContrib)}</td>` : ''}
         ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight">+${formatCurrency(opt2.extraContrib)}</td>` : ''}
       </tr>
       <tr>
-        <td class="strategy-table__label">Total Taxable Income</td>
+        <td class="strategy-table__label">${createTooltip('Total Taxable Income', 'Base Pay + RSU + Net Capital Gains minus any deductible Extra Super.')}</td>
         <td class="strategy-table__col1">${formatCurrency(base.taxableIncome)}</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.taxableIncome)}</td>` : ''}
         ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.taxableIncome)}</td>` : ''}
       </tr>
       <tr>
-        <td class="strategy-table__label">Income Tax Payable</td>
+        <td class="strategy-table__label">${createTooltip('Income Tax Payable', 'Calculated based on standard ATO tax brackets.')}</td>
         <td class="strategy-table__col1">${formatCurrency(base.incomeTaxAfterOffsets)}</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.incomeTaxAfterOffsets)}</td>` : ''}
         ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.incomeTaxAfterOffsets)}</td>` : ''}
       </tr>
       <tr>
-        <td class="strategy-table__label">Medicare Levy & MLS</td>
+        <td class="strategy-table__label">${createTooltip('Medicare Levy & MLS', 'Standard 2% Medicare Levy plus any applicable Medicare Levy Surcharge if you lack private health cover.')}</td>
         <td class="strategy-table__col1">${formatCurrency(Math.round(base.medicareLevy) + base.mls.amount)}</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(Math.round(opt.medicareLevy) + opt.mls.amount)}</td>` : ''}
         ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(Math.round(opt2.medicareLevy) + opt2.mls.amount)}</td>` : ''}
       </tr>
       <tr class="strategy-table__row--total">
-        <td class="strategy-table__label">Total Income Tax Liability</td>
+        <td class="strategy-table__label">${createTooltip('Total Income Tax Liability', 'Total tax owed on your taxable income, including Medicare and MLS.')}</td>
         <td class="strategy-table__col1">${formatCurrency(base.totalTaxLiability)}</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.totalTaxLiability)}</td>` : ''}
         ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.totalTaxLiability)}</td>` : ''}
       </tr>
       <tr>
-        <td class="strategy-table__label">15% Tax on Extra Super</td>
+        <td class="strategy-table__label">${createTooltip('15% Tax on Extra Super', 'The concessional tax rate applied to your extra super contributions upon entering the super fund.')}</td>
         <td class="strategy-table__col1">$0</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.superTaxOnExtra)}</td>` : ''}
         ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.superTaxOnExtra)}</td>` : ''}
       </tr>
       <tr>
-        <td class="strategy-table__label">Div 293 Tax Assessment</td>
+        <td class="strategy-table__label">${createTooltip('Div 293 Tax Assessment', 'Additional 15% tax on concessional super contributions for high income earners (Combined Income > $250k).')}</td>
         <td class="strategy-table__col1">${base.div293.applies ? formatCurrency(base.div293.tax) : '—'}</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${opt.div293.applies ? formatCurrency(opt.div293.tax) : '—'}</td>` : ''}
         ${showCol3 ? `<td class="strategy-table__col3">${opt2.div293.applies ? formatCurrency(opt2.div293.tax) : '—'}</td>` : ''}
       </tr>
       <tr style="background: rgba(212, 165, 50, 0.05);">
-        <td class="strategy-table__label" style="color: var(--gold);">Net Super Balance Added<br><small style="font-weight:400;color:var(--text-muted)">After 15% Tax & Div 293</small></td>
+        <td class="strategy-table__label" style="color: var(--gold);">${createTooltip('Net Super Balance Added', 'The actual amount added to your super balance after the 15% contributions tax and any Div 293 tax.')}</td>
         <td class="strategy-table__col1" style="font-weight: 700; color: var(--gold);">${formatCurrency(baseNetSuper)}</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight" style="font-weight: 700; color: var(--gold);">${formatCurrency(optNetSuper)}</td>` : ''}
         ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight" style="font-weight: 700; color: var(--gold);">${formatCurrency(opt2NetSuper)}</td>` : ''}
       </tr>
       <tr>
-        <td class="strategy-table__label">Net Extra Super Added<br><small style="font-weight:400;color:var(--text-muted)">Excluding Employer SG</small></td>
+        <td class="strategy-table__label">${createTooltip('Net Extra Super Added', 'The portion of the net super balance that comes solely from your extra voluntary contributions.')}</td>
         <td class="strategy-table__col1">$0</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight">+${formatCurrency(netOnlyExtraSuper)}</td>` : ''}
         ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight">+${formatCurrency(netOnlyExtraSuper2)}</td>` : ''}
       </tr>
       <tr class="strategy-table__row--total" style="border-top: 2px solid var(--border-medium);">
-        <td class="strategy-table__label" style="color: var(--text-primary);">Total Tax Bill to Pay (End of Year)</td>
+        <td class="strategy-table__label" style="color: var(--text-primary);">${createTooltip('Total Tax Bill to Pay (End of Year)', 'Your total tax liability minus the tax your employer already withheld (PAYG). A negative number is a refund.')}</td>
         <td class="strategy-table__col1" style="color: ${baseRemainingTax < 0 ? 'var(--emerald)' : 'var(--rose)'}">${baseRemainingTax < 0 ? 'Refund: ' : 'Owe: '}${formatCurrency(Math.abs(baseRemainingTax))}</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight" style="color: ${optRemainingTax < 0 ? 'var(--emerald)' : 'var(--rose)'}">${optRemainingTax < 0 ? 'Refund: ' : 'Owe: '}${formatCurrency(Math.abs(optRemainingTax))}</td>` : `<td class="strategy-table__col2" style="background: rgba(0,0,0,0.05);"></td>`}
         ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight" style="color: ${opt2RemainingTax < 0 ? 'var(--emerald)' : 'var(--rose)'}">${opt2RemainingTax < 0 ? 'Refund: ' : 'Owe: '}${formatCurrency(Math.abs(opt2RemainingTax))}</td>` : ''}
       </tr>
       <tr class="strategy-table__row--total" style="background: rgba(255,255,255,0.02);">
-        <td class="strategy-table__label" style="color: var(--text-primary);">Total Cash Required</td>
+        <td class="strategy-table__label" style="color: var(--text-primary);">${createTooltip('Total Cash Required', 'The total out-of-pocket cash you need: the extra super contribution you made plus any tax bill you owe (or minus your refund).')}</td>
         <td class="strategy-table__col1" style="color: ${baseCashRequired <= 0 ? 'var(--emerald)' : 'var(--rose)'}">${baseCashRequired <= 0 ? 'Net Refund: ' : 'Out of Pocket: '}${formatCurrency(Math.abs(baseCashRequired))}</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight" style="color: ${optCashRequired <= 0 ? 'var(--emerald)' : 'var(--rose)'}">${optCashRequired <= 0 ? 'Net Refund: ' : 'Out of Pocket: '}${formatCurrency(Math.abs(optCashRequired))}</td>` : `<td class="strategy-table__col2" style="background: rgba(0,0,0,0.05);"></td>`}
         ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight" style="color: ${opt2CashRequired <= 0 ? 'var(--emerald)' : 'var(--rose)'}">${opt2CashRequired <= 0 ? 'Net Refund: ' : 'Out of Pocket: '}${formatCurrency(Math.abs(opt2CashRequired))}</td>` : ''}
