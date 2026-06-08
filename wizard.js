@@ -2,74 +2,6 @@
    SUPER WEALTH WIZARD V2 LOGIC
    ═══════════════════════════════════════════════ */
 
-// ── Tax Configuration (Copied from original) ──
-const CONFIG = {
-  financialYear: '2025-26',
-  superRate: 0.12,
-  medicareLevyRate: 0.02,
-  div293Threshold: 250_000,
-  div293Rate: 0.15,
-  taxBrackets: [
-    { min: 0,       max: 18_200,    rate: 0,    base: 0,      label: '$0 – $18,200' },
-    { min: 18_201,  max: 45_000,    rate: 0.16, base: 0,      label: '$18,201 – $45,000' },
-    { min: 45_001,  max: 135_000,   rate: 0.30, base: 4_288,  label: '$45,001 – $135,000' },
-    { min: 135_001, max: 190_000,   rate: 0.37, base: 31_288, label: '$135,001 – $190,000' },
-    { min: 190_001, max: Infinity,  rate: 0.45, base: 51_638, label: '$190,001+' },
-  ],
-  mlsSingles: [
-    { min: 0,       max: 101_000, rate: 0 },
-    { min: 101_001, max: 118_000, rate: 0.01 },
-    { min: 118_001, max: 158_000, rate: 0.0125 },
-    { min: 158_001, max: Infinity, rate: 0.015 },
-  ],
-};
-
-
-function createTooltip(title, text) {
-  if (!text) return title;
-  return `
-    <div style="display: flex; align-items: center; gap: 6px; position: relative;">
-      <span>${title}</span>
-      <div class="info-tooltip">
-        <span class="info-tooltip__icon">?</span>
-        <div class="info-tooltip__text">${text}</div>
-      </div>
-    </div>
-  `;
-}
-
-// ── Input Formatting ───────────────────────────
-function formatCurrency(value) {
-  if (value === 0) return '$0';
-  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
-}
-
-function formatPercent(decimal, decimals = 1) {
-  return (decimal * 100).toFixed(decimals) + '%';
-}
-
-function parseInputValue(inputEl) {
-  if (!inputEl) return 0;
-  const raw = inputEl.value.replace(/[^0-9.]/g, '');
-  return parseFloat(raw) || 0;
-}
-
-function handleCurrencyInput(e) {
-  const input = e.target;
-  const cursorPos = input.selectionStart;
-  const rawBefore = input.value;
-  const raw = input.value.replace(/[^0-9]/g, '');
-
-  if (raw === '') {
-    input.value = '0';
-    return;
-  }
-  const formatted = parseInt(raw, 10).toLocaleString('en-AU');
-  input.value = formatted;
-  const diff = formatted.length - rawBefore.length;
-  const newPos = Math.max(0, cursorPos + diff);
-  requestAnimationFrame(() => input.setSelectionRange(newPos, newPos));
-}
 
 document.querySelectorAll('.wizard-input').forEach(input => {
   input.addEventListener('input', handleCurrencyInput);
@@ -173,90 +105,6 @@ restartBtn.addEventListener('click', () => {
   updateWizard();
 });
 
-// ── Tax Math Engine ────────────────────────────
-function calculateIncomeTax(taxableIncome) {
-  let totalTax = 0;
-  for (const bracket of CONFIG.taxBrackets) {
-    if (taxableIncome > bracket.min) {
-      const taxableInBracket = Math.min(taxableIncome, bracket.max) - bracket.min;
-      totalTax += taxableInBracket * bracket.rate;
-    }
-  }
-  return { total: totalTax };
-}
-
-function calculateLITO(taxableIncome) {
-  if (taxableIncome <= 37_500) return 700;
-  if (taxableIncome <= 45_000) return Math.max(0, 700 - (taxableIncome - 37_500) * 0.05);
-  if (taxableIncome <= 66_667) return Math.max(0, 325 - (taxableIncome - 45_000) * 0.015);
-  return 0;
-}
-
-function calculateMedicareLevy(taxableIncome) {
-  return taxableIncome * CONFIG.medicareLevyRate;
-}
-
-function calculateMLS(taxableIncome, hasPrivateHealth, rfba = 0) {
-  if (hasPrivateHealth) return { rate: 0, amount: 0 };
-  const incomeForMLS = taxableIncome + rfba;
-  for (const tier of CONFIG.mlsSingles) {
-    if (incomeForMLS >= tier.min && incomeForMLS <= tier.max) {
-      return { rate: tier.rate, amount: Math.round(incomeForMLS * tier.rate) };
-    }
-  }
-  return { rate: 0.015, amount: Math.round((incomeForMLS) * 0.015) };
-}
-
-function calculateDiv293(taxableIncome, superAmount, rfba = 0) {
-  const div293Income = taxableIncome + superAmount + rfba;
-  const excess = Math.max(0, div293Income - CONFIG.div293Threshold);
-  if (excess <= 0) {
-    return {
-      income: div293Income,
-      threshold: CONFIG.div293Threshold,
-      excess: 0,
-      taxableAmount: 0,
-      tax: 0,
-      applies: false,
-    };
-  }
-  const taxableAmount = Math.min(superAmount, excess);
-  const tax = Math.round(taxableAmount * CONFIG.div293Rate);
-  return {
-    income: div293Income,
-    threshold: CONFIG.div293Threshold,
-    excess,
-    taxableAmount,
-    tax,
-    applies: true,
-  };
-}
-
-function calculateScenario(taxableIncome, superGuaranteeAmount, concessionalExtra, nonConcessionalExtra, hasPrivateHealth, rfba = 0) {
-  const taxResult = calculateIncomeTax(taxableIncome);
-  const lito = calculateLITO(taxableIncome);
-  const incomeTaxAfterOffsets = Math.max(0, taxResult.total - lito);
-  const medicareLevy = calculateMedicareLevy(taxableIncome);
-  const mls = calculateMLS(taxableIncome, hasPrivateHealth, rfba);
-
-  const totalExtra = concessionalExtra + nonConcessionalExtra;
-  const superTaxOnExtra = Math.round(concessionalExtra * 0.15); 
-  const div293 = calculateDiv293(taxableIncome, superGuaranteeAmount + concessionalExtra, rfba);
-  const totalTaxLiability = incomeTaxAfterOffsets + medicareLevy + mls.amount;
-
-  return {
-    taxableIncome,
-    incomeTaxAfterOffsets,
-    medicareLevy,
-    mls,
-    totalTaxLiability,
-    extraContrib: totalExtra,
-    concessionalExtra,
-    nonConcessionalExtra,
-    superTaxOnExtra,
-    div293
-  };
-}
 
 // ── Final Calculation & Render ─────────────────
 const inputSection = document.getElementById('inputSection');
@@ -399,16 +247,28 @@ function renderComparisonDashboard(base, opt, opt2, paygWithheld, sg, concCap, b
       <tr>
         <td class="strategy-table__label">${createTooltip('Employer Super Guarantee (SG)', 'Mandatory 12% contribution paid by your employer based on your Base Pay.')}</td>
         <td class="strategy-table__col1">${formatCurrency(sg)}</td>
-        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(sg)}</td>` : `<td class="strategy-table__col2" rowspan="8" style="vertical-align: middle; text-align: center; background: rgba(0,0,0,0.05); color: var(--text-muted);">
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(sg)}</td>` : `<td class="strategy-table__col2" rowspan="10" style="vertical-align: middle; text-align: center; background: rgba(0,0,0,0.05); color: var(--text-muted);">
           <strong>Option 1</strong><br><br>No extra contribution.
         </td>`}
         ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(sg)}</td>` : ''}
       </tr>
       <tr>
-        <td class="strategy-table__label">${createTooltip('Additional Super Contribution', 'Voluntary extra super contributions you choose to make.')}</td>
+        <td class="strategy-table__label">${createTooltip('Additional Super Contribution', 'Total voluntary extra super contributions you choose to make.')}</td>
         <td class="strategy-table__col1">$0</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight">+${formatCurrency(opt.extraContrib)}</td>` : ''}
         ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight">+${formatCurrency(opt2.extraContrib)}</td>` : ''}
+      </tr>
+      <tr style="font-size: 0.85em; opacity: 0.8; background: rgba(0,0,0,0.02);">
+        <td class="strategy-table__label" style="padding-left: var(--space-xl);">&rdsh; Concessional (Before-Tax)</td>
+        <td class="strategy-table__col1">$0</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.concessionalExtra)}</td>` : ''}
+        ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.concessionalExtra)}</td>` : ''}
+      </tr>
+      <tr style="font-size: 0.85em; opacity: 0.8; background: rgba(0,0,0,0.02);">
+        <td class="strategy-table__label" style="padding-left: var(--space-xl);">&rdsh; Non-Concessional (After-Tax)</td>
+        <td class="strategy-table__col1">$0</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.nonConcessionalExtra)}</td>` : ''}
+        ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.nonConcessionalExtra)}</td>` : ''}
       </tr>
       <tr>
         <td class="strategy-table__label">${createTooltip('Total Taxable Income', 'Base Pay + RSU + Net Capital Gains minus any deductible Extra Super.')}</td>
@@ -447,7 +307,7 @@ function renderComparisonDashboard(base, opt, opt2, paygWithheld, sg, concCap, b
         ${showCol3 ? `<td class="strategy-table__col3">${opt2.div293.applies ? formatCurrency(opt2.div293.tax) : '—'}</td>` : ''}
       </tr>
       <tr style="background: rgba(212, 165, 50, 0.05);">
-        <td class="strategy-table__label" style="color: var(--gold);">${createTooltip('Net Super Balance Added', 'The actual amount added to your super balance after the 15% contributions tax and any Div 293 tax.')}</td>
+        <td class="strategy-table__label" style="color: var(--gold);">${createTooltip('Net Super Balance Added', 'The actual amount added to your super balance after the 15% contributions tax. This assumes any Div 293 tax is paid directly from your super fund via a release authority.')}</td>
         <td class="strategy-table__col1" style="font-weight: 700; color: var(--gold);">${formatCurrency(baseNetSuper)}</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight" style="font-weight: 700; color: var(--gold);">${formatCurrency(optNetSuper)}</td>` : ''}
         ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight" style="font-weight: 700; color: var(--gold);">${formatCurrency(opt2NetSuper)}</td>` : ''}
@@ -469,6 +329,12 @@ function renderComparisonDashboard(base, opt, opt2, paygWithheld, sg, concCap, b
         <td class="strategy-table__col1" style="color: ${baseCashRequired <= 0 ? 'var(--emerald)' : 'var(--rose)'}">${baseCashRequired <= 0 ? 'Net Refund: ' : 'Out of Pocket: '}${formatCurrency(Math.abs(baseCashRequired))}</td>
         ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight" style="color: ${optCashRequired <= 0 ? 'var(--emerald)' : 'var(--rose)'}">${optCashRequired <= 0 ? 'Net Refund: ' : 'Out of Pocket: '}${formatCurrency(Math.abs(optCashRequired))}</td>` : `<td class="strategy-table__col2" style="background: rgba(0,0,0,0.05);"></td>`}
         ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight" style="color: ${opt2CashRequired <= 0 ? 'var(--emerald)' : 'var(--rose)'}">${opt2CashRequired <= 0 ? 'Net Refund: ' : 'Out of Pocket: '}${formatCurrency(Math.abs(opt2CashRequired))}</td>` : ''}
+      </tr>
+      <tr class="strategy-table__row--total" style="background: rgba(255,255,255,0.02);">
+        <td class="strategy-table__label" style="color: var(--text-primary);">${createTooltip('Total Extra Cash Required', 'The additional cash out of pocket required compared to doing nothing (Scenario 1).')}</td>
+        <td class="strategy-table__col1" style="color: var(--text-muted);">$0</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight">${formatCurrency(optCashRequired - baseCashRequired)}</td>` : `<td class="strategy-table__col2" style="background: rgba(0,0,0,0.05);"></td>`}
+        ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight">${formatCurrency(opt2CashRequired - baseCashRequired)}</td>` : ''}
       </tr>
     </tbody>
   </table>
@@ -529,12 +395,12 @@ function renderSavingsBox(title, benefit, extraContrib) {
   return `
     <div style="flex: 1; min-width: 250px; padding: var(--space-lg); background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius-lg); text-align: center;">
       <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: var(--space-sm);">${title}</div>
-      <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: var(--space-xs);">Overall Net Cash Benefit</div>
+      <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: var(--space-xs);">Overall Net TAX Benefit</div>
       <div style="font-size: 2rem; font-weight: 700; color: ${isPositive ? 'var(--emerald)' : 'var(--rose)'}; margin-bottom: var(--space-xs); display: flex; align-items: baseline; justify-content: center; gap: 4px;">
         ${isPositive ? '+' : ''}${formatCurrency(benefit)}${percentStr}
       </div>
-      <div style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.4;">
-        This is the true value you gain, taking into account the extra cash you paid vs. the net super you gained.
+      <div style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; font-style: italic; opacity: 0.85;">
+        The pure tax savings you legally keep in your own net worth by choosing Super over a cash salary.
       </div>
     </div>
   `;
