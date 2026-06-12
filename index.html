@@ -77,6 +77,24 @@
 
     </main>
 
+    <main style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-lg); margin-top: var(--space-lg);">
+      <!-- Option 3: Aus Tax 2025-26 -->
+      <a href="aus-tax-2025.html" style="text-decoration: none; color: inherit; display: flex; grid-column: 1 / -1;">
+        <div class="card card--input" style="flex: 1; border: 1px solid var(--gold); transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.transform='none'; this.style.boxShadow='var(--shadow-md)'">
+          <div class="card__header" style="margin-bottom: var(--space-md);">
+            <div class="card__icon" style="background: rgba(212, 165, 50, 0.1); color: var(--gold);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <h2 class="card__title" style="font-size: 1.25rem;">2025-26 Tax Calculator</h2>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: var(--space-lg);">Quickly calculate your estimated tax, Medicare, and HECS using the new 2025-26 marginal rates and stage 3 tax cuts.</p>
+          <div style="color: var(--gold); font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; margin-top: auto;">
+            Calculate Tax <span style="margin-left: 4px;">&rarr;</span>
+          </div>
+        </div>
+      </a>
+    </main>
+
     <footer style="text-align: center; padding: var(--space-xl) 0; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border-subtle); margin-top: var(--space-2xl);">
       <p style="margin-bottom: var(--space-md);">This calculator is for informational purposes only and does not constitute financial advice. <br>Always consult a registered tax agent. | <a href="privacy.html" style="color: var(--text-muted); text-decoration: underline;">Privacy Policy</a></p>
     </footer>

@@ -13,6 +13,8 @@ const cgtInput = document.getElementById('capitalGains');
 const carryForwardInput = document.getElementById('carryForward');
 const extraSuperInput = document.getElementById('extraSuper');
 const extraSuperInput2 = document.getElementById('extraSuper2');
+const currentAgeInput = document.getElementById('currentAge');
+const annualisedReturnInput = document.getElementById('annualisedReturn');
 const cgtToggle = document.getElementById('cgtDiscount');
 const phiToggle = document.getElementById('privateHealth');
 const resultsSection = document.getElementById('results');
@@ -34,6 +36,18 @@ let toastTimeout;
     performCalculation();
   });
 });
+
+if (currentAgeInput) {
+  currentAgeInput.addEventListener('input', () => {
+    performCalculation();
+  });
+}
+
+if (annualisedReturnInput) {
+  annualisedReturnInput.addEventListener('input', () => {
+    performCalculation();
+  });
+}
 
 
 // ── Toggle Switches ────────────────────────────
@@ -62,6 +76,8 @@ async function saveState() {
       carryForward: parseInputValue(carryForwardInput),
       extraSuper: parseInputValue(extraSuperInput),
       extraSuper2: parseInputValue(extraSuperInput2),
+      currentAge: parseInt(currentAgeInput?.value, 10) || 30,
+      annualisedReturn: parseFloat(annualisedReturnInput?.value) || 8.9,
       cgtDiscount: cgtToggle.getAttribute('aria-checked') === 'true',
       privateHealth: phiToggle.getAttribute('aria-checked') === 'true',
     };
@@ -90,6 +106,8 @@ async function loadState() {
         if (state.carryForward) carryForwardInput.value = state.carryForward.toLocaleString('en-AU');
         if (state.extraSuper) extraSuperInput.value = state.extraSuper.toLocaleString('en-AU');
         if (state.extraSuper2 && extraSuperInput2) extraSuperInput2.value = state.extraSuper2.toLocaleString('en-AU');
+        if (state.currentAge && currentAgeInput) currentAgeInput.value = state.currentAge;
+        if (state.annualisedReturn && annualisedReturnInput) annualisedReturnInput.value = state.annualisedReturn;
         
         if (state.cgtDiscount !== undefined) cgtToggle.setAttribute('aria-checked', state.cgtDiscount);
         if (state.privateHealth !== undefined) phiToggle.setAttribute('aria-checked', state.privateHealth);
@@ -407,6 +425,26 @@ function renderComparisonDashboard(base, opt, opt2) {
     }
     
     html += `</div>`;
+  }
+  // Vertical Comparison (Cash vs Super)
+  if (opt.extraContrib > 0 || opt2.extraContrib > 0) {
+    html += `<div class="card--result animate-in" style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius-lg);">
+      <h3 style="margin-bottom: var(--space-md); font-size: 1.1rem; color: var(--text-primary);">Initial Instant ROI</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: var(--space-lg);">
+        A visual comparison of your actual cash out-of-pocket versus the net money deposited into your super fund (after 15% tax).
+      </p>
+      <div style="display: flex; gap: var(--space-lg); flex-wrap: wrap; justify-content: space-around;">`;
+    
+    if (opt.extraContrib > 0) {
+      const optExtraCash = Math.max(0, optCashRequired - baseCashRequired);
+      html += renderVerticalBars("Option 1", optExtraCash, netOnlyExtraSuper);
+    }
+    if (showCol3) {
+      const opt2ExtraCash = Math.max(0, opt2CashRequired - baseCashRequired);
+      html += renderVerticalBars("Option 2", opt2ExtraCash, netOnlyExtraSuper2);
+    }
+    
+    html += `</div></div>`;
   } else {
     html += `<div class="strategy-na" style="margin-top: var(--space-xl);">
       <div class="strategy-na__icon">✅</div>
@@ -435,6 +473,30 @@ function renderComparisonDashboard(base, opt, opt2) {
   // Div 293 Detailed Breakdown
   html += renderDiv293Box(base, opt, opt2, base.superResult.amount, showCol3);
 
+  // Projected Retirement Balance calculations
+  const currentAge = parseInt(currentAgeInput?.value, 10) || 30;
+  const yearsToRetire = Math.max(0, 60 - currentAge);
+  const rateStr = annualisedReturnInput?.value || "8.9";
+  const rate = (parseFloat(rateStr) || 8.9) / 100;
+  
+  function calcFutureValue(annualExtraSuper) {
+    if (yearsToRetire === 0) return annualExtraSuper;
+    const contribsFv = annualExtraSuper * ((Math.pow(1 + rate, yearsToRetire) - 1) / rate) * (1 + rate);
+    return contribsFv;
+  }
+  
+  const baseProjected = calcFutureValue(0);
+  const optProjected = calcFutureValue(netOnlyExtraSuper);
+  const opt2Projected = calcFutureValue(netOnlyExtraSuper2);
+  
+  const optExtraCash = Math.max(0, optCashRequired - baseCashRequired);
+  const opt2ExtraCash = Math.max(0, opt2CashRequired - baseCashRequired);
+  const optCashProjected = calcFutureValue(optExtraCash);
+  const opt2CashProjected = calcFutureValue(opt2ExtraCash);
+
+  // Projected Retirement Breakdown
+  html += renderRetirementBox(baseProjected, optProjected, opt2Projected, opt, opt2, showCol3, yearsToRetire, rateStr, 0, netOnlyExtraSuper, netOnlyExtraSuper2, optCashProjected, opt2CashProjected, optExtraCash, opt2ExtraCash);
+
   el.innerHTML = html;
   showResults();
 }
@@ -456,6 +518,44 @@ function renderAppSavingsBox(title, benefit, incomeTaxSaving, superTax, div293In
         <span>Income Tax Saving: <strong>${formatCurrency(incomeTaxSaving)}</strong></span>
         <span>Less 15% Super Tax: <strong>${formatCurrency(superTax)}</strong></span>
         ${div293Increase > 0 ? `<span>Less Extra Div 293: <strong>${formatCurrency(div293Increase)}</strong></span>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderVerticalBars(title, cashAmt, superAmt) {
+  const max = Math.max(cashAmt, superAmt, 1);
+  const cashHeight = Math.max(5, (cashAmt / max) * 100);
+  const superHeight = Math.max(5, (superAmt / max) * 100);
+  const diff = superAmt - cashAmt;
+  const percentStr = cashAmt > 0 ? `+${formatPercent(diff / cashAmt, 1)}` : 'Infinite';
+  
+  return `
+    <div style="flex: 1; min-width: 200px; max-width: 300px; display: flex; flex-direction: column; align-items: center;">
+      <h4 style="margin-bottom: var(--space-lg); color: var(--text-primary); font-size: 1rem;">${title}</h4>
+      <div style="display: flex; justify-content: center; align-items: flex-end; gap: 2rem; height: 160px; width: 100%; border-bottom: 2px solid var(--border-medium); padding-bottom: 8px;">
+        
+        <!-- Cash Bar -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 60px; height: 100%; justify-content: flex-end;">
+          <span style="font-size: 0.85rem; font-weight: 700; color: var(--rose);">${formatCurrency(cashAmt)}</span>
+          <div style="width: 100%; height: ${cashHeight}%; background: var(--rose); border-radius: 4px 4px 0 0; opacity: 0.85;"></div>
+        </div>
+
+        <!-- Super Bar -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 60px; height: 100%; justify-content: flex-end;">
+          <span style="font-size: 0.85rem; font-weight: 700; color: var(--emerald);">${formatCurrency(superAmt)}</span>
+          <div style="width: 100%; height: ${superHeight}%; background: var(--emerald); border-radius: 4px 4px 0 0;"></div>
+        </div>
+
+      </div>
+      
+      <div style="display: flex; justify-content: center; gap: 2rem; width: 100%; margin-top: 8px;">
+        <span style="font-size: 0.75rem; color: var(--text-muted); text-align: center; width: 60px; line-height: 1.2;">Cash<br>Required</span>
+        <span style="font-size: 0.75rem; color: var(--text-muted); text-align: center; width: 60px; line-height: 1.2;">Net Super<br>Added</span>
+      </div>
+      
+      <div style="text-align: center; margin-top: var(--space-md); padding: 4px 12px; background: rgba(16, 185, 129, 0.1); border-radius: var(--radius-sm);">
+        <span style="font-size: 0.85rem; color: var(--emerald); font-weight: 700;">${percentStr} Instant ROI</span>
       </div>
     </div>
   `;
@@ -524,6 +624,94 @@ function renderDiv293Box(base, opt, opt2, sg, showCol3) {
     </div>
   </div>`;
 }
+
+function renderRetirementBox(baseProj, optProj, opt2Proj, opt, opt2, showCol3, yearsToRetire, rateStr, baseStarting, optStarting, opt2Starting, optCashProjected, opt2CashProjected, optExtraCash, opt2ExtraCash) {
+  if (yearsToRetire <= 0) {
+    return `<div class="card--result animate-in" style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius-lg);">
+      <h3 style="margin-bottom: var(--space-md); font-size: 1.1rem; color: var(--text-primary);">Projected Wealth at Retirement (Age 60)</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">You have already reached the assumed retirement age of 60. Projection is not applicable.</p>
+    </div>`;
+  }
+
+  if (opt.extraContrib <= 0 && opt2.extraContrib <= 0) {
+    return '';
+  }
+
+  let html = `
+  <div class="card--result animate-in" style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius-lg);">
+    <h3 style="margin-bottom: var(--space-md); font-size: 1.1rem; color: var(--text-primary);">Projected Wealth at Retirement (Age 60)</h3>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: var(--space-lg);">
+      Assuming an <strong>${rateStr}% annualized return</strong> over the next <strong>${yearsToRetire} years</strong>.
+    </p>`;
+
+  if (opt.extraContrib > 0) {
+    html += `
+    <h4 style="margin-bottom: var(--space-sm); color: var(--text-primary); font-size: 1rem;">Option 1: Extra ${formatCurrency(opt.extraContrib)}</h4>
+    <div style="overflow-x: auto; margin-bottom: ${showCol3 && opt2.extraContrib > 0 ? 'var(--space-xl)' : '0'};">
+      <table class="strategy-table" style="font-size: 0.9rem;">
+        <thead>
+          <tr>
+            <th class="strategy-table__label" style="width: 25%;"></th>
+            <th class="strategy-table__col2" style="width: 37.5%; text-align: right;">Option 1 Extra Total Extra Cash Required deployed in public market</th>
+            <th class="strategy-table__col3" style="width: 37.5%; text-align: right;">Option 1 Net Super Balance Added</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="strategy-table__label">Starting Balance</td>
+            <td class="strategy-table__col2" style="font-weight: 700;">${formatCurrency(optExtraCash)}</td>
+            <td class="strategy-table__col3" style="font-weight: 700;">${formatCurrency(optStarting)}</td>
+          </tr>
+          <tr style="background: rgba(255,255,255,0.02);">
+            <td class="strategy-table__label">At Age 60</td>
+            <td class="strategy-table__col2">${formatCurrency(optCashProjected)}</td>
+            <td class="strategy-table__col3">${formatCurrency(optProj)}</td>
+          </tr>
+          <tr class="strategy-table__row--total" style="border-top: 2px solid var(--border-medium);">
+            <td class="strategy-table__label" style="font-weight: 700;">Difference</td>
+            <td colspan="2" style="font-weight: 700; color: var(--emerald); text-align: center; font-size: 1.05rem;">+${formatCurrency(optProj - optCashProjected)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  if (showCol3 && opt2.extraContrib > 0) {
+    html += `
+    <h4 style="margin-bottom: var(--space-sm); color: var(--text-primary); font-size: 1rem;">Option 2: Extra ${formatCurrency(opt2.extraContrib)}</h4>
+    <div style="overflow-x: auto;">
+      <table class="strategy-table" style="font-size: 0.9rem;">
+        <thead>
+          <tr>
+            <th class="strategy-table__label" style="width: 25%;"></th>
+            <th class="strategy-table__col2" style="width: 37.5%; text-align: right;">Option 2 Extra Total Extra Cash Required deployed in public market</th>
+            <th class="strategy-table__col3" style="width: 37.5%; text-align: right;">Option 2 Net Super Balance Added</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="strategy-table__label">Starting Balance</td>
+            <td class="strategy-table__col2" style="font-weight: 700;">${formatCurrency(opt2ExtraCash)}</td>
+            <td class="strategy-table__col3" style="font-weight: 700;">${formatCurrency(opt2Starting)}</td>
+          </tr>
+          <tr style="background: rgba(255,255,255,0.02);">
+            <td class="strategy-table__label">At Age 60</td>
+            <td class="strategy-table__col2">${formatCurrency(opt2CashProjected)}</td>
+            <td class="strategy-table__col3">${formatCurrency(opt2Proj)}</td>
+          </tr>
+          <tr class="strategy-table__row--total" style="border-top: 2px solid var(--border-medium);">
+            <td class="strategy-table__label" style="font-weight: 700;">Difference</td>
+            <td colspan="2" style="font-weight: 700; color: var(--emerald); text-align: center; font-size: 1.05rem;">+${formatCurrency(opt2Proj - opt2CashProjected)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
 
 function showResults() {
   resultsSection.classList.add('visible');

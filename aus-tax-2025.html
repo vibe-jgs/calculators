@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Australian Tax Calculator 2025-26</title>
+  <meta name="description" content="Calculate your Australian income tax for the 2025-26 financial year.">
+  <link rel="stylesheet" href="styles.css">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
+  <script src="theme-init.js"></script>
+</head>
+<body>
+  <!-- Animated background -->
+  <div class="bg-glow bg-glow--1"></div>
+  <div class="bg-glow bg-glow--2"></div>
+  <div class="bg-glow bg-glow--3"></div>
+
+  <div class="container">
+    <header class="header">
+      <div class="header__badge">2025-26 Financial Year</div>
+      <h1 class="header__title">Australian Tax <span>Calculator</span></h1>
+      <p class="header__subtitle">Accurate estimations for the 2025-26 income year, including the new HECS marginal system.</p>
+    </header>
+
+    <main>
+      <!-- Input Section -->
+      <section class="card card--input">
+        <div class="card__header">
+          <div class="card__icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <h2 class="card__title">Your Details</h2>
+        </div>
+
+        <form id="taxForm">
+          <div class="field">
+            <label class="field__label" for="income">Gross Income / Salary</label>
+            <div class="field__input-wrap">
+              <span class="field__prefix">$</span>
+              <input type="number" id="income" class="field__input" placeholder="e.g. 120000" required min="0" step="1">
+            </div>
+            <span class="field__helper">Your total taxable income for the year.</span>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="payg">PAYG Tax Withheld (Optional)</label>
+            <div class="field__input-wrap">
+              <span class="field__prefix">$</span>
+              <input type="number" id="payg" class="field__input" placeholder="e.g. 25000" min="0" step="1">
+            </div>
+            <span class="field__helper">Tax already paid through your employer.</span>
+          </div>
+
+          <div class="toggles">
+            <div class="toggle-row">
+              <div>
+                <label class="toggle-row__label">Include Medicare Levy (2%)</label>
+                <span class="toggle-row__helper">Most Australian residents pay this.</span>
+              </div>
+              <button type="button" class="toggle" id="toggleMedicare" role="switch" aria-checked="true">
+                <span class="toggle__track"><span class="toggle__thumb"></span></span>
+              </button>
+            </div>
+
+            <div class="toggle-row">
+              <div>
+                <label class="toggle-row__label">I have a HECS / HELP Debt</label>
+                <span class="toggle-row__helper">Calculates compulsory repayments (2025-26 rules).</span>
+              </div>
+              <button type="button" class="toggle" id="toggleHecs" role="switch" aria-checked="false">
+                <span class="toggle__track"><span class="toggle__thumb"></span></span>
+              </button>
+            </div>
+
+            <div class="toggle-row">
+              <div>
+                <label class="toggle-row__label">Include Superannuation (12%)</label>
+                <span class="toggle-row__helper">Is Super included in your Gross Income figure?</span>
+              </div>
+              <button type="button" class="toggle" id="toggleSuper" role="switch" aria-checked="false">
+                <span class="toggle__track"><span class="toggle__thumb"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-calculate">
+            <span class="btn-calculate__text">Calculate Tax</span>
+            <span class="btn-calculate__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>
+          </button>
+        </form>
+      </section>
+
+      <!-- Results Section -->
+      <section class="results" id="resultsSection">
+        <div class="card card--result card--total animate-in">
+          <div class="total-hero">
+            <div class="total-hero__label" id="finalResultLabel">Estimated Net Income</div>
+            <div class="total-hero__amount" id="netIncomeDisplay">$0</div>
+            <div class="total-hero__rate">Effective Tax Rate: <span id="effectiveRateDisplay">0%</span></div>
+          </div>
+          
+          <div class="total-grid">
+            <div class="total-grid__item">
+              <div class="total-grid__label">Total Tax Payable</div>
+              <div class="total-grid__value total-grid__value--rose" id="totalTaxDisplay">$0</div>
+            </div>
+            <div class="total-grid__item">
+              <div class="total-grid__label">Superannuation</div>
+              <div class="total-grid__value total-grid__value--gold" id="superDisplay">$0</div>
+            </div>
+          </div>
+
+          <div style="margin-top: var(--space-xl);">
+            <div class="result-line">
+              <span class="result-line__label">Taxable Income</span>
+              <span class="result-line__value" id="taxableIncomeDisplay">$0</span>
+            </div>
+            <div class="result-line">
+              <span class="result-line__label">Base Income Tax</span>
+              <span class="result-line__value" id="baseTaxDisplay">$0</span>
+            </div>
+            <div class="result-line" id="medicareRow">
+              <span class="result-line__label">Medicare Levy (2%)</span>
+              <span class="result-line__value" id="medicareDisplay">$0</span>
+            </div>
+            <div class="result-line" id="hecsRow" style="display: none;">
+              <span class="result-line__label">HECS / HELP Repayment</span>
+              <span class="result-line__value" id="hecsDisplay">$0</span>
+            </div>
+            
+            <div id="paygSection" style="display: none;">
+              <div class="result-line result-line--payg-withheld">
+                <span class="result-line__label">Less PAYG Withheld</span>
+                <span class="result-line__value" id="paygDisplay">$0</span>
+              </div>
+              <div class="result-line result-line--refund" id="refundRow" style="display: none;">
+                <span class="result-line__label">Estimated Refund</span>
+                <span class="result-line__value" id="refundDisplay">$0</span>
+              </div>
+              <div class="result-line result-line--owing" id="owingRow" style="display: none;">
+                <span class="result-line__label">Estimated Tax Bill</span>
+                <span class="result-line__value" id="owingDisplay">$0</span>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+      </section>
+    </main>
+    
+    <div style="text-align: center; margin-top: var(--space-2xl);">
+        <a href="index.html" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">&larr; Back to Dashboard</a>
+    </div>
+  </div>
+
+  <script src="aus-tax.js"></script>
+</body>
+</html>

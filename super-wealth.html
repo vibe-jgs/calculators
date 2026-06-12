@@ -98,6 +98,25 @@
             <span class="field__helper">Total capital gains accrued during the financial year</span>
           </div>
 
+          <!-- Current Age -->
+          <div class="field" id="field-currentAge">
+            <label class="field__label" for="currentAge">Current Age</label>
+            <div class="field__input-wrap">
+              <input type="text" id="currentAge" class="field__input" placeholder="30" value="30" inputmode="numeric" required style="padding-left: 1rem;">
+            </div>
+            <span class="field__helper">Used to project your super balance at retirement (age 60)</span>
+          </div>
+
+          <!-- Annualised Return -->
+          <div class="field" id="field-annualisedReturn">
+            <label class="field__label" for="annualisedReturn">Assumed Annualised Return</label>
+            <div class="field__input-wrap">
+              <input type="text" id="annualisedReturn" class="field__input" placeholder="8.9" value="8.9" inputmode="decimal" required style="padding-left: 1rem;">
+              <span class="field__prefix" style="left: auto; right: 1rem;">%</span>
+            </div>
+            <span class="field__helper">Estimated long-term yearly growth rate of your super</span>
+          </div>
+
           <!-- Carry Forward Super -->
           <div class="field" id="field-carryForward">
             <label class="field__label" for="carryForward">Unused Carry Forward Super Balance</label>
