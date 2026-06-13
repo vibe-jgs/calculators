@@ -478,6 +478,8 @@ function renderComparisonDashboard(base, opt, opt2) {
   const yearsToRetire = Math.max(0, 60 - currentAge);
   const rateStr = annualisedReturnInput?.value || "8.9";
   const rate = (parseFloat(rateStr) || 8.9) / 100;
+  const inflationStr = inflationRateInput?.value || "2.5";
+  const inflationRate = (parseFloat(inflationStr) || 2.5) / 100;
   
   function calcFutureValue(annualExtraSuper) {
     if (yearsToRetire === 0) return annualExtraSuper;
@@ -495,7 +497,7 @@ function renderComparisonDashboard(base, opt, opt2) {
   const opt2CashProjected = calcFutureValue(opt2ExtraCash);
 
   // Projected Retirement Breakdown
-  html += renderRetirementBox(baseProjected, optProjected, opt2Projected, opt, opt2, showCol3, yearsToRetire, rateStr, 0, netOnlyExtraSuper, netOnlyExtraSuper2, optCashProjected, opt2CashProjected, optExtraCash, opt2ExtraCash);
+  html += renderRetirementBox(baseProjected, optProjected, opt2Projected, opt, opt2, showCol3, yearsToRetire, rateStr, 0, netOnlyExtraSuper, netOnlyExtraSuper2, optCashProjected, opt2CashProjected, optExtraCash, opt2ExtraCash, base.taxableIncome, inflationRate);
 
   el.innerHTML = html;
   showResults();
@@ -625,7 +627,7 @@ function renderDiv293Box(base, opt, opt2, sg, showCol3) {
   </div>`;
 }
 
-function renderRetirementBox(baseProj, optProj, opt2Proj, opt, opt2, showCol3, yearsToRetire, rateStr, baseStarting, optStarting, opt2Starting, optCashProjected, opt2CashProjected, optExtraCash, opt2ExtraCash) {
+function renderRetirementBox(baseProj, optProj, opt2Proj, opt, opt2, showCol3, yearsToRetire, rateStr, baseStarting, optStarting, opt2Starting, optCashProjected, opt2CashProjected, optExtraCash, opt2ExtraCash, baseTaxableIncome, inflationRate) {
   if (yearsToRetire <= 0) {
     return `<div class="card--result animate-in" style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius-lg);">
       <h3 style="margin-bottom: var(--space-md); font-size: 1.1rem; color: var(--text-primary);">Projected Wealth at Retirement (Age 60)</h3>
@@ -636,6 +638,35 @@ function renderRetirementBox(baseProj, optProj, opt2Proj, opt, opt2, showCol3, y
   if (opt.extraContrib <= 0 && opt2.extraContrib <= 0) {
     return '';
   }
+
+  function calculateCGTOnGain(indexedCostBase, cashProjected) {
+    const realGain = Math.max(0, cashProjected - indexedCostBase);
+    if (realGain <= 0) return 0;
+    
+    // Calculate marginal tax on real gain
+    const baseIncome = baseTaxableIncome || 0;
+    const taxWithGain = calculateIncomeTax(baseIncome + realGain).total + calculateMedicareLevy(baseIncome + realGain);
+    const taxWithoutGain = calculateIncomeTax(baseIncome).total + calculateMedicareLevy(baseIncome);
+    const marginalTaxOnGain = taxWithGain - taxWithoutGain;
+    
+    // Proposed rule: minimum 30% tax on real gain
+    const minTax = realGain * 0.30;
+    return Math.max(minTax, marginalTaxOnGain);
+  }
+
+  function calcIndexedCostBase(annualExtraCash, inflRate) {
+    if (yearsToRetire === 0) return annualExtraCash * yearsToRetire;
+    if (inflRate === 0) return annualExtraCash * yearsToRetire;
+    return annualExtraCash * ((Math.pow(1 + inflRate, yearsToRetire) - 1) / inflRate) * (1 + inflRate);
+  }
+
+  const optIndexedCostBase = calcIndexedCostBase(optExtraCash, inflationRate);
+  const optCgt = calculateCGTOnGain(optIndexedCostBase, optCashProjected);
+  const optCashFinal = optCashProjected - optCgt;
+
+  const opt2IndexedCostBase = calcIndexedCostBase(opt2ExtraCash, inflationRate);
+  const opt2Cgt = calculateCGTOnGain(opt2IndexedCostBase, opt2CashProjected);
+  const opt2CashFinal = opt2CashProjected - opt2Cgt;
 
   let html = `
   <div class="card--result animate-in" style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius-lg);">
@@ -667,9 +698,19 @@ function renderRetirementBox(baseProj, optProj, opt2Proj, opt, opt2, showCol3, y
             <td class="strategy-table__col2">${formatCurrency(optCashProjected)}</td>
             <td class="strategy-table__col3">${formatCurrency(optProj)}</td>
           </tr>
+          <tr style="background: rgba(255,255,255,0.02);">
+            <td class="strategy-table__label">Estimated CGT (Proposed Rules)</td>
+            <td class="strategy-table__col2" style="color: var(--rose);">-${formatCurrency(optCgt)}</td>
+            <td class="strategy-table__col3" style="color: var(--text-muted);">N/A (Tax-Free)</td>
+          </tr>
+          <tr style="background: rgba(255,255,255,0.02); font-weight: 600;">
+            <td class="strategy-table__label">Final Value (After CGT)</td>
+            <td class="strategy-table__col2">${formatCurrency(optCashFinal)}</td>
+            <td class="strategy-table__col3">${formatCurrency(optProj)}</td>
+          </tr>
           <tr class="strategy-table__row--total" style="border-top: 2px solid var(--border-medium);">
             <td class="strategy-table__label" style="font-weight: 700;">Difference</td>
-            <td colspan="2" style="font-weight: 700; color: var(--emerald); text-align: center; font-size: 1.05rem;">+${formatCurrency(optProj - optCashProjected)}</td>
+            <td colspan="2" style="font-weight: 700; color: var(--emerald); text-align: center; font-size: 1.05rem;">+${formatCurrency(optProj - optCashFinal)}</td>
           </tr>
         </tbody>
       </table>
@@ -699,16 +740,30 @@ function renderRetirementBox(baseProj, optProj, opt2Proj, opt, opt2, showCol3, y
             <td class="strategy-table__col2">${formatCurrency(opt2CashProjected)}</td>
             <td class="strategy-table__col3">${formatCurrency(opt2Proj)}</td>
           </tr>
+          <tr style="background: rgba(255,255,255,0.02);">
+            <td class="strategy-table__label">Estimated CGT (Proposed Rules)</td>
+            <td class="strategy-table__col2" style="color: var(--rose);">-${formatCurrency(opt2Cgt)}</td>
+            <td class="strategy-table__col3" style="color: var(--text-muted);">N/A (Tax-Free)</td>
+          </tr>
+          <tr style="background: rgba(255,255,255,0.02); font-weight: 600;">
+            <td class="strategy-table__label">Final Value (After CGT)</td>
+            <td class="strategy-table__col2">${formatCurrency(opt2CashFinal)}</td>
+            <td class="strategy-table__col3">${formatCurrency(opt2Proj)}</td>
+          </tr>
           <tr class="strategy-table__row--total" style="border-top: 2px solid var(--border-medium);">
             <td class="strategy-table__label" style="font-weight: 700;">Difference</td>
-            <td colspan="2" style="font-weight: 700; color: var(--emerald); text-align: center; font-size: 1.05rem;">+${formatCurrency(opt2Proj - opt2CashProjected)}</td>
+            <td colspan="2" style="font-weight: 700; color: var(--emerald); text-align: center; font-size: 1.05rem;">+${formatCurrency(opt2Proj - opt2CashFinal)}</td>
           </tr>
         </tbody>
       </table>
     </div>`;
   }
 
-  html += `</div>`;
+  html += `
+    <div style="margin-top: var(--space-md); padding: 0 var(--space-md);">
+      <p style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">* Projections assume the proposed 2027 Federal Budget CGT rules (cost base indexation + 30% minimum tax rate) are legislated and apply to all future growth.</p>
+    </div>
+  </div>`;
   return html;
 }
 
