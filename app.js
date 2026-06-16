@@ -1,0 +1,841 @@
+/* ═══════════════════════════════════════════════
+   AUSTRALIAN TAX CALCULATOR — FY 2025-26
+   ═══════════════════════════════════════════════ */
+
+
+
+// ── DOM References ─────────────────────────────
+const form = document.getElementById('taxForm');
+const basePayInput = document.getElementById('basePay');
+const rfbaInput = document.getElementById('rfbaValue');
+const rsuInput = document.getElementById('rsuValue');
+const cgtInput = document.getElementById('capitalGains');
+const carryForwardInput = document.getElementById('carryForward');
+const extraSuperInput = document.getElementById('extraSuper');
+const extraSuperInput2 = document.getElementById('extraSuper2');
+const currentAgeInput = document.getElementById('currentAge');
+const annualisedReturnInput = document.getElementById('annualisedReturn');
+const inflationRateInput = document.getElementById('inflationRate');
+const cgtToggle = document.getElementById('cgtDiscount');
+const phiToggle = document.getElementById('privateHealth');
+const resultsSection = document.getElementById('results');
+
+// Toast Notification DOM
+const toastEl = document.getElementById('toast');
+const toastTitle = document.getElementById('toastTitle');
+const toastMessage = document.getElementById('toastMessage');
+const toastClose = document.getElementById('toastClose');
+let toastTimeout;
+
+
+
+
+[basePayInput, rfbaInput, rsuInput, cgtInput, carryForwardInput, extraSuperInput, extraSuperInput2].forEach(input => {
+  if (!input) return;
+  input.addEventListener('input', (e) => {
+    handleCurrencyInput(e);
+  });
+});
+
+if (currentAgeInput) {
+  // Only validation if needed, no auto-calculate
+}
+
+if (annualisedReturnInput) {
+  // Only validation if needed, no auto-calculate
+}
+
+if (inflationRateInput) {
+  // Only validation if needed, no auto-calculate
+}
+
+
+// ── Toggle Switches ────────────────────────────
+function setupToggle(toggle) {
+  toggle.addEventListener('click', () => {
+    const current = toggle.getAttribute('aria-checked') === 'true';
+    toggle.setAttribute('aria-checked', !current);
+    performCalculation();
+  });
+}
+
+setupToggle(cgtToggle);
+setupToggle(phiToggle);
+
+
+// ── State Persistence ──────────────────────────
+const STATE_KEY = 'swc-input-state';
+
+async function saveState() {
+  if (!window.swcConsentGranted) return;
+  try {
+    const state = {
+      basePay: parseInputValue(basePayInput),
+      rfba: parseInputValue(rfbaInput),
+      rsuValue: parseInputValue(rsuInput),
+      capitalGains: parseInputValue(cgtInput),
+      carryForward: parseInputValue(carryForwardInput),
+      extraSuper: parseInputValue(extraSuperInput),
+      extraSuper2: parseInputValue(extraSuperInput2),
+      currentAge: parseInt(currentAgeInput?.value, 10) || 30,
+      annualisedReturn: parseFloat(annualisedReturnInput?.value) || 8.9,
+      inflationRate: parseFloat(inflationRateInput?.value) || 2.5,
+      cgtDiscount: cgtToggle.getAttribute('aria-checked') === 'true',
+      privateHealth: phiToggle.getAttribute('aria-checked') === 'true',
+    };
+    if (typeof encryptState === 'function') {
+      const encrypted = await encryptState(state);
+      if (encrypted) localStorage.setItem(STATE_KEY, JSON.stringify(encrypted));
+    }
+  } catch (e) {}
+}
+
+async function loadState() {
+  try {
+    const saved = localStorage.getItem(STATE_KEY);
+    if (saved) {
+      const encryptedObj = JSON.parse(saved);
+      let state = null;
+      if (typeof decryptState === 'function') {
+        state = await decryptState(encryptedObj);
+      }
+      
+      if (state) {
+        if (state.basePay) basePayInput.value = state.basePay.toLocaleString('en-AU');
+        if (state.rfba && rfbaInput) rfbaInput.value = state.rfba.toLocaleString('en-AU');
+        if (state.rsuValue) rsuInput.value = state.rsuValue.toLocaleString('en-AU');
+        if (state.capitalGains) cgtInput.value = state.capitalGains.toLocaleString('en-AU');
+        if (state.carryForward) carryForwardInput.value = state.carryForward.toLocaleString('en-AU');
+        if (state.extraSuper) extraSuperInput.value = state.extraSuper.toLocaleString('en-AU');
+        if (state.extraSuper2 && extraSuperInput2) extraSuperInput2.value = state.extraSuper2.toLocaleString('en-AU');
+        if (state.currentAge && currentAgeInput) currentAgeInput.value = state.currentAge;
+        if (state.annualisedReturn && annualisedReturnInput) annualisedReturnInput.value = state.annualisedReturn;
+        if (state.inflationRate !== undefined && inflationRateInput) inflationRateInput.value = state.inflationRate;
+        
+        if (state.cgtDiscount !== undefined) cgtToggle.setAttribute('aria-checked', state.cgtDiscount);
+        if (state.privateHealth !== undefined) phiToggle.setAttribute('aria-checked', state.privateHealth);
+      }
+    }
+  } catch (e) {}
+}
+
+
+// ── Theme Management ───────────────────────────
+const THEME_KEY = 'swc-theme-preference';
+const themeSwitcher = document.getElementById('themeSwitcher');
+const themeIndicator = document.getElementById('themeIndicator');
+
+function getSystemTheme() {
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
+function applyTheme(preference) {
+  const resolved = preference === 'system' ? getSystemTheme() : preference;
+  document.documentElement.setAttribute('data-theme', resolved);
+
+  // Update button states
+  themeSwitcher.querySelectorAll('.theme-switcher__btn').forEach(btn => {
+    btn.setAttribute('aria-checked', btn.dataset.theme === preference);
+  });
+
+  // Slide indicator
+  updateThemeIndicator(preference);
+}
+
+function updateThemeIndicator(preference) {
+  const activeBtn = themeSwitcher.querySelector(`[data-theme="${preference}"]`);
+  if (activeBtn && themeIndicator) {
+    const parentRect = themeSwitcher.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    themeIndicator.style.width = btnRect.width + 'px';
+    themeIndicator.style.transform = `translateX(${btnRect.left - parentRect.left - 4}px)`;
+  }
+}
+
+function getThemePref() {
+  try { return localStorage.getItem(THEME_KEY) || 'system'; } catch (e) { return 'system'; }
+}
+
+function setThemePref(theme) {
+  try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+}
+
+// Initialize theme from localStorage
+const savedTheme = getThemePref();
+applyTheme(savedTheme);
+// Re-measure after fonts load
+window.addEventListener('load', () => {
+  updateThemeIndicator(getThemePref());
+});
+
+// Listen for OS theme changes (only matters when set to "system")
+window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+  if (getThemePref() === 'system') applyTheme('system');
+});
+
+// Switcher click handler
+themeSwitcher.addEventListener('click', (e) => {
+  const btn = e.target.closest('.theme-switcher__btn');
+  if (!btn) return;
+  const theme = btn.dataset.theme;
+  setThemePref(theme);
+  applyTheme(theme);
+});
+
+
+
+function performCalculation() {
+  // Parse inputs (enforce >= 0 for currency)
+  const basePay = Math.max(0, parseInputValue(basePayInput));
+  const rfba = Math.max(0, parseInputValue(rfbaInput));
+  const rsuValue = Math.max(0, parseInputValue(rsuInput));
+  const grossCapitalGains = Math.max(0, parseInputValue(cgtInput));
+  const hasCgtDiscount = cgtToggle.getAttribute('aria-checked') === 'true';
+  const hasPrivateHealth = phiToggle.getAttribute('aria-checked') === 'true';
+  const carryForward = Math.max(0, parseInputValue(carryForwardInput) || 0);
+  const concCap = 30_000 + carryForward;
+
+  // Calculate net capital gain
+  const cgtDiscount = hasCgtDiscount ? grossCapitalGains * 0.5 : 0;
+  const netCapitalGain = grossCapitalGains - cgtDiscount;
+
+  // Auto-calculate Employer PAYG
+  const paygWithheld = calculateEmployerPAYG(basePay);
+
+  // Super Guarantee
+  const superResult = calculateSuperGuarantee(basePay);
+  const sg = superResult.amount;
+  
+  // Total taxable income (Base Case)
+  const taxableIncomeBase = basePay + rsuValue + netCapitalGain;
+
+  // BASE SCENARIO
+  const baseData = calculateScenario(taxableIncomeBase, sg, 0, 0, hasPrivateHealth, rfba);
+  baseData.basePay = basePay;
+  baseData.rsuValue = rsuValue;
+  baseData.grossCapitalGains = grossCapitalGains;
+  baseData.cgtDiscount = cgtDiscount;
+  baseData.netCapitalGain = netCapitalGain;
+  baseData.superResult = superResult;
+  baseData.concCap = concCap;
+  baseData.paygWithheld = paygWithheld;
+
+  // Remaining Cap Check
+  const remainingCap = Math.max(0, concCap - sg);
+
+  // OPTIMIZED SCENARIO (Using user's exact extra contribution input)
+  const extraContrib = parseInputValue(extraSuperInput) || 0;
+  const extraContrib2 = parseInputValue(extraSuperInput2) || 0;
+  
+  // Split into Concessional and Non-Concessional
+  const concessionalExtra = Math.min(extraContrib, remainingCap);
+  const nonConcessionalExtra = Math.max(0, extraContrib - remainingCap);
+
+  if (nonConcessionalExtra > 0) {
+    showToast(
+      "Cap Exceeded: Contribution Split",
+      `Your Option 1 contribution (${formatCurrency(extraContrib)}) exceeds your remaining cap. It has been split into a ${formatCurrency(concessionalExtra)} concessional (deductible) contribution and a ${formatCurrency(nonConcessionalExtra)} non-concessional (after-tax) personal contribution.`
+    );
+  } else if (extraContrib > 0) {
+    hideToast(); // Hide if they correct it back under the cap
+  }
+
+  const taxableIncomeOpt = taxableIncomeBase - concessionalExtra;
+  const optData = calculateScenario(taxableIncomeOpt, sg, concessionalExtra, nonConcessionalExtra, hasPrivateHealth, rfba);
+
+  // OPTIMIZED SCENARIO 2
+  const concessionalExtra2 = Math.min(extraContrib2, remainingCap);
+  const nonConcessionalExtra2 = Math.max(0, extraContrib2 - remainingCap);
+  const taxableIncomeOpt2 = taxableIncomeBase - concessionalExtra2;
+  const optData2 = calculateScenario(taxableIncomeOpt2, sg, concessionalExtra2, nonConcessionalExtra2, hasPrivateHealth, rfba);
+
+  // Render the side-by-side dashboard
+  renderComparisonDashboard(baseData, optData, optData2);
+  
+  // Save state for next visit
+  saveState();
+}
+
+// ── Render Dashboard ───────────────────────────
+
+function renderComparisonDashboard(base, opt, opt2) {
+  const el = document.getElementById('dashboardSummary');
+  
+  // Savings calculations
+  const incomeTaxSaving = base.totalTaxLiability - opt.totalTaxLiability;
+  const div293Increase = opt.div293.tax - base.div293.tax;
+  const netSaving = incomeTaxSaving - opt.superTaxOnExtra - Math.max(0, div293Increase);
+
+  const incomeTaxSaving2 = base.totalTaxLiability - opt2.totalTaxLiability;
+  const div293Increase2 = opt2.div293.tax - base.div293.tax;
+  const netSaving2 = incomeTaxSaving2 - opt2.superTaxOnExtra - Math.max(0, div293Increase2);
+
+  const baseRemainingTax = base.totalTaxLiability - base.paygWithheld;
+  const optRemainingTax = opt.totalTaxLiability - base.paygWithheld;
+  const opt2RemainingTax = opt2.totalTaxLiability - base.paygWithheld;
+
+  const baseCashRequired = baseRemainingTax;
+  const optCashRequired = optRemainingTax + opt.extraContrib;
+  const opt2CashRequired = opt2RemainingTax + opt2.extraContrib;
+
+  // Net Super Added
+  const baseNetSuper = base.superResult.amount - Math.round(base.superResult.amount * 0.15) - base.div293.tax;
+  
+  const optTotalSuper = base.superResult.amount + opt.extraContrib;
+  const optConcessionalTotal = base.superResult.amount + opt.concessionalExtra;
+  const optNetSuper = optTotalSuper - Math.round(optConcessionalTotal * 0.15) - opt.div293.tax;
+  const netOnlyExtraSuper = optNetSuper - baseNetSuper;
+
+  const opt2TotalSuper = base.superResult.amount + opt2.extraContrib;
+  const opt2ConcessionalTotal = base.superResult.amount + opt2.concessionalExtra;
+  const opt2NetSuper = opt2TotalSuper - Math.round(opt2ConcessionalTotal * 0.15) - opt2.div293.tax;
+  const netOnlyExtraSuper2 = opt2NetSuper - baseNetSuper;
+
+  const showCol3 = opt2.extraContrib > 0;
+
+  let html = '';
+
+  // Context Header
+  html += `<div class="strategy-header" style="justify-content: center; margin-bottom: var(--space-xl);">
+    <div class="strategy-header__info" style="font-size: 0.95rem; text-align: center;">
+      Auto-calculated PAYG Withheld: <strong style="color: var(--emerald)">${formatCurrency(base.paygWithheld)}</strong> 
+      <br><small style="color: var(--text-muted)">(Based on Base Pay of ${formatCurrency(base.basePay)})</small>
+    </div>
+  </div>`;
+
+  // Master Table
+  html += `<div style="overflow-x: auto;">
+  <table class="strategy-table" style="font-size: 0.95rem;">
+    <thead>
+      <tr>
+        <th class="strategy-table__label"></th>
+        <th class="strategy-table__col1">No extra super<br><small>Scenario 1</small></th>
+        ${opt.extraContrib > 0 ? `<th class="strategy-table__col2">Option 1<br><small>${formatCurrency(opt.extraContrib)} Extra</small></th>` : `<th class="strategy-table__col2" style="opacity: 0.5;">Option 1<br><small>With Extra Super</small></th>`}
+        ${showCol3 ? `<th class="strategy-table__col3">Option 2<br><small>${formatCurrency(opt2.extraContrib)} Extra</small></th>` : ''}
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="strategy-table__label">${createTooltip('Employer Super Guarantee (SG)', 'Mandatory 12% contribution paid by your employer based on your Base Pay.')}</td>
+        <td class="strategy-table__col1">${formatCurrency(base.superResult.amount)}</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(base.superResult.amount)}</td>` : `<td class="strategy-table__col2" rowspan="10" style="vertical-align: middle; text-align: center; background: rgba(0,0,0,0.05); color: var(--text-muted);">
+          Enter an extra super<br>contribution in the form<br>to see a comparison.
+        </td>`}
+        ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(base.superResult.amount)}</td>` : ''}
+      </tr>
+      <tr>
+        <td class="strategy-table__label">${createTooltip('Additional Super Contribution', 'Total voluntary extra super contributions you choose to make.')}</td>
+        <td class="strategy-table__col1">$0</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight">+${formatCurrency(opt.extraContrib)}</td>` : ''}
+        ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight">+${formatCurrency(opt2.extraContrib)}</td>` : ''}
+      </tr>
+      <tr style="font-size: 0.85em; opacity: 0.8; background: rgba(0,0,0,0.02);">
+        <td class="strategy-table__label" style="padding-left: var(--space-xl);">&rdsh; Concessional (Before-Tax)</td>
+        <td class="strategy-table__col1">$0</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.concessionalExtra)}</td>` : ''}
+        ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.concessionalExtra)}</td>` : ''}
+      </tr>
+      <tr style="font-size: 0.85em; opacity: 0.8; background: rgba(0,0,0,0.02);">
+        <td class="strategy-table__label" style="padding-left: var(--space-xl);">&rdsh; Non-Concessional (After-Tax)</td>
+        <td class="strategy-table__col1">$0</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.nonConcessionalExtra)}</td>` : ''}
+        ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.nonConcessionalExtra)}</td>` : ''}
+      </tr>
+      <tr>
+        <td class="strategy-table__label">${createTooltip('Total Taxable Income', 'Base Pay + RSU + Net Capital Gains minus any deductible Extra Super.')}</td>
+        <td class="strategy-table__col1">${formatCurrency(base.taxableIncome)}</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.taxableIncome)}</td>` : ''}
+        ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.taxableIncome)}</td>` : ''}
+      </tr>
+      <tr>
+        <td class="strategy-table__label">${createTooltip('Income Tax Payable', 'Calculated based on standard ATO tax brackets.')}</td>
+        <td class="strategy-table__col1">${formatCurrency(base.incomeTaxAfterOffsets)}</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.incomeTaxAfterOffsets)}</td>` : ''}
+        ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.incomeTaxAfterOffsets)}</td>` : ''}
+      </tr>
+      <tr>
+        <td class="strategy-table__label">${createTooltip('Medicare Levy & MLS', 'Standard 2% Medicare Levy plus any applicable Medicare Levy Surcharge if you lack private health cover.')}</td>
+        <td class="strategy-table__col1">${formatCurrency(Math.round(base.medicareLevy) + base.mls.amount)}</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(Math.round(opt.medicareLevy) + opt.mls.amount)}</td>` : ''}
+        ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(Math.round(opt2.medicareLevy) + opt2.mls.amount)}</td>` : ''}
+      </tr>
+      <tr class="strategy-table__row--total">
+        <td class="strategy-table__label">${createTooltip('Total Income Tax Liability', 'Total tax owed on your taxable income, including Medicare and MLS.')}</td>
+        <td class="strategy-table__col1">${formatCurrency(base.totalTaxLiability)}</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.totalTaxLiability)}</td>` : ''}
+        ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.totalTaxLiability)}</td>` : ''}
+      </tr>
+      <tr>
+        <td class="strategy-table__label">${createTooltip('15% Tax on Extra Super', 'The concessional tax rate applied to your extra super contributions upon entering the super fund.')}</td>
+        <td class="strategy-table__col1">$0</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.superTaxOnExtra)}</td>` : ''}
+        ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.superTaxOnExtra)}</td>` : ''}
+      </tr>
+      <tr>
+        <td class="strategy-table__label">${createTooltip('Div 293 Tax Assessment', 'Additional 15% tax on concessional super contributions for high income earners (Combined Income > $250k).')}</td>
+        <td class="strategy-table__col1">${base.div293.applies ? formatCurrency(base.div293.tax) : '—'}</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${opt.div293.applies ? formatCurrency(opt.div293.tax) : '—'}</td>` : ''}
+        ${showCol3 ? `<td class="strategy-table__col3">${opt2.div293.applies ? formatCurrency(opt2.div293.tax) : '—'}</td>` : ''}
+      </tr>
+      <tr style="background: rgba(212, 165, 50, 0.05);">
+        <td class="strategy-table__label" style="color: var(--gold);">${createTooltip('Net Super Balance Added', 'The actual amount added to your super balance. Concessional portions incur a 15% contributions tax; non-concessional portions have 0% entry tax. This assumes any Div 293 tax is paid directly from your super fund via a release authority.')}</td>
+        <td class="strategy-table__col1" style="font-weight: 700; color: var(--gold);">${formatCurrency(baseNetSuper)}</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight" style="font-weight: 700; color: var(--gold);">${formatCurrency(optNetSuper)}</td>` : ''}
+        ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight" style="font-weight: 700; color: var(--gold);">${formatCurrency(opt2NetSuper)}</td>` : ''}
+      </tr>
+      <tr>
+        <td class="strategy-table__label">${createTooltip('Net Extra Super Added', 'The portion of the net super balance that comes solely from your extra voluntary contributions.')}</td>
+        <td class="strategy-table__col1">$0</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight">+${formatCurrency(netOnlyExtraSuper)}</td>` : ''}
+        ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight">+${formatCurrency(netOnlyExtraSuper2)}</td>` : ''}
+      </tr>
+      <tr class="strategy-table__row--total" style="border-top: 2px solid var(--border-medium);">
+        <td class="strategy-table__label" style="color: var(--text-primary);">${createTooltip('Total Tax Bill to Pay (End of Year)', 'Your total tax liability minus the tax your employer already withheld (PAYG). A negative number is a refund.')}</td>
+        <td class="strategy-table__col1" style="color: ${baseRemainingTax < 0 ? 'var(--emerald)' : 'var(--rose)'}">${baseRemainingTax < 0 ? 'Refund: ' : 'Owe: '}${formatCurrency(Math.abs(baseRemainingTax))}</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight" style="color: ${optRemainingTax < 0 ? 'var(--emerald)' : 'var(--rose)'}">${optRemainingTax < 0 ? 'Refund: ' : 'Owe: '}${formatCurrency(Math.abs(optRemainingTax))}</td>` : `<td class="strategy-table__col2" style="background: rgba(0,0,0,0.05);"></td>`}
+        ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight" style="color: ${opt2RemainingTax < 0 ? 'var(--emerald)' : 'var(--rose)'}">${opt2RemainingTax < 0 ? 'Refund: ' : 'Owe: '}${formatCurrency(Math.abs(opt2RemainingTax))}</td>` : ''}
+      </tr>
+      <tr class="strategy-table__row--total" style="background: rgba(255,255,255,0.02);">
+        <td class="strategy-table__label" style="color: var(--text-primary);">${createTooltip('Total Cash Required', 'The total out-of-pocket cash you need: the extra super contribution you made plus any tax bill you owe (or minus your refund).')}</td>
+        <td class="strategy-table__col1" style="color: ${baseCashRequired <= 0 ? 'var(--emerald)' : 'var(--rose)'}">${baseCashRequired <= 0 ? 'Net Refund: ' : 'Out of Pocket: '}${formatCurrency(Math.abs(baseCashRequired))}</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight" style="color: ${optCashRequired <= 0 ? 'var(--emerald)' : 'var(--rose)'}">${optCashRequired <= 0 ? 'Net Refund: ' : 'Out of Pocket: '}${formatCurrency(Math.abs(optCashRequired))}</td>` : `<td class="strategy-table__col2" style="background: rgba(0,0,0,0.05);"></td>`}
+        ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight" style="color: ${opt2CashRequired <= 0 ? 'var(--emerald)' : 'var(--rose)'}">${opt2CashRequired <= 0 ? 'Net Refund: ' : 'Out of Pocket: '}${formatCurrency(Math.abs(opt2CashRequired))}</td>` : ''}
+      </tr>
+      <tr class="strategy-table__row--total" style="background: rgba(255,255,255,0.02);">
+        <td class="strategy-table__label" style="color: var(--text-primary);">${createTooltip('Total Extra Cash Required', 'The additional cash out of pocket required compared to doing nothing (Scenario 1).')}</td>
+        <td class="strategy-table__col1" style="color: var(--text-muted);">$0</td>
+        ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight">${formatCurrency(optCashRequired - baseCashRequired)}</td>` : `<td class="strategy-table__col2" style="background: rgba(0,0,0,0.05);"></td>`}
+        ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight">${formatCurrency(opt2CashRequired - baseCashRequired)}</td>` : ''}
+      </tr>
+    </tbody>
+  </table>
+  </div>`;
+
+  // Savings Hero Boxes
+  if (opt.extraContrib > 0 || opt2.extraContrib > 0) {
+    html += `<div style="display: flex; gap: var(--space-lg); margin-top: var(--space-xl); flex-wrap: wrap;">`;
+    
+    // Option 1 Box
+    if (opt.extraContrib > 0) {
+      const netBenefit = netOnlyExtraSuper - (optCashRequired - baseCashRequired);
+      html += renderAppSavingsBox("Option 1", netBenefit, incomeTaxSaving, opt.superTaxOnExtra, div293Increase, opt.extraContrib);
+    }
+    
+    // Option 2 Box
+    if (showCol3) {
+      const netBenefit2 = netOnlyExtraSuper2 - (opt2CashRequired - baseCashRequired);
+      html += renderAppSavingsBox("Option 2", netBenefit2, incomeTaxSaving2, opt2.superTaxOnExtra, div293Increase2, opt2.extraContrib);
+    }
+    
+    html += `</div>`;
+  }
+  // Vertical Comparison (Cash vs Super)
+  if (opt.extraContrib > 0 || opt2.extraContrib > 0) {
+    html += `<div class="card--result animate-in" style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius-lg);">
+      <h3 style="margin-bottom: var(--space-md); font-size: 1.1rem; color: var(--text-primary);">Initial Instant ROI</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: var(--space-lg);">
+        A visual comparison of your actual cash out-of-pocket versus the net money deposited into your super fund (after 15% tax).
+      </p>
+      <div style="display: flex; gap: var(--space-lg); flex-wrap: wrap; justify-content: space-around;">`;
+    
+    if (opt.extraContrib > 0) {
+      const optExtraCash = Math.max(0, optCashRequired - baseCashRequired);
+      html += renderVerticalBars("Option 1", optExtraCash, netOnlyExtraSuper);
+    }
+    if (showCol3) {
+      const opt2ExtraCash = Math.max(0, opt2CashRequired - baseCashRequired);
+      html += renderVerticalBars("Option 2", opt2ExtraCash, netOnlyExtraSuper2);
+    }
+    
+    html += `</div></div>`;
+  } else {
+    html += `<div class="strategy-na" style="margin-top: var(--space-xl);">
+      <div class="strategy-na__icon">✅</div>
+      <p>Your employer SG of <strong>${formatCurrency(base.superResult.amount)}</strong> already meets or exceeds your concessional cap of <strong>${formatCurrency(base.concCap)}</strong>.</p>
+      <p style="margin-top: 8px;">No additional concessional contributions available.</p>
+    </div>`;
+  }
+
+  // Excess Cap Warning
+  if (opt.nonConcessionalExtra > 0 || opt2.nonConcessionalExtra > 0) {
+    let msg = '';
+    if (opt.nonConcessionalExtra > 0 && opt2.nonConcessionalExtra > 0) {
+      msg = `Both of your scenarios exceed your remaining cap (${formatCurrency(Math.max(0, base.concCap - base.superResult.amount))}) and have been split into concessional and non-concessional components.`;
+    } else if (opt.nonConcessionalExtra > 0) {
+      msg = `<strong>Option 1</strong> total extra contribution (${formatCurrency(opt.extraContrib)}) exceeds your remaining cap. It has been split into <strong>${formatCurrency(opt.concessionalExtra)} concessional</strong> and <strong>${formatCurrency(opt.nonConcessionalExtra)} non-concessional</strong> contributions.`;
+    } else {
+      msg = `<strong>Option 2</strong> total extra contribution (${formatCurrency(opt2.extraContrib)}) exceeds your remaining cap. It has been split into <strong>${formatCurrency(opt2.concessionalExtra)} concessional</strong> and <strong>${formatCurrency(opt2.nonConcessionalExtra)} non-concessional</strong> contributions.`;
+    }
+
+    html += `<div class="notice notice--warning" style="margin-top: var(--space-xl);">
+      <span class="notice__icon">ℹ️</span>
+      <span>${msg}</span>
+    </div>`;
+  }
+
+  // Div 293 Detailed Breakdown
+  html += renderDiv293Box(base, opt, opt2, base.superResult.amount, showCol3);
+
+  // Projected Retirement Balance calculations
+  const currentAgeStr = parseInt(currentAgeInput?.value, 10) || 30;
+  const currentAge = Math.min(120, Math.max(15, currentAgeStr));
+  const yearsToRetire = Math.max(0, 60 - currentAge);
+  
+  const rateStr = annualisedReturnInput?.value || "8.9";
+  const rate = Math.min(100, Math.max(0, parseFloat(rateStr) || 8.9)) / 100;
+  
+  const inflationStr = inflationRateInput?.value || "2.5";
+  const inflationRate = Math.min(50, Math.max(0, parseFloat(inflationStr) || 2.5)) / 100;
+  
+  function calcFutureValue(oneTimeExtraSuper) {
+    if (yearsToRetire === 0) return oneTimeExtraSuper;
+    return oneTimeExtraSuper * Math.pow(1 + rate, yearsToRetire);
+  }
+  
+  const baseProjected = calcFutureValue(0);
+  const optProjected = calcFutureValue(netOnlyExtraSuper);
+  const opt2Projected = calcFutureValue(netOnlyExtraSuper2);
+  
+  const optExtraCash = Math.max(0, optCashRequired - baseCashRequired);
+  const opt2ExtraCash = Math.max(0, opt2CashRequired - baseCashRequired);
+  const optCashProjected = calcFutureValue(optExtraCash);
+  const opt2CashProjected = calcFutureValue(opt2ExtraCash);
+
+  // Projected Retirement Breakdown
+  html += renderRetirementBox(baseProjected, optProjected, opt2Projected, opt, opt2, showCol3, yearsToRetire, rateStr, 0, netOnlyExtraSuper, netOnlyExtraSuper2, optCashProjected, opt2CashProjected, optExtraCash, opt2ExtraCash, base.taxableIncome, inflationRate);
+
+  // Automated Decision-Making Transparency Disclaimer
+  html += `
+    <div style="margin-top: var(--space-xl); padding: var(--space-md); border-top: 1px solid var(--border-medium); font-size: 0.85rem; color: var(--text-muted); opacity: 0.85; line-height: 1.5;">
+      <strong>Automated Decision-Making Notice:</strong> The calculations, projections, and "best option" highlights generated above are determined automatically using fixed mathematical formulas based on current Australian Taxation Office (ATO) rates and the specific inputs you provided. This tool does not use artificial intelligence or machine learning. The projections assume constant linear growth and inflation rates, which will not reflect actual market volatility. These outputs do not constitute personal financial advice.
+    </div>
+  `;
+
+  el.innerHTML = html;
+  showResults();
+}
+
+function renderAppSavingsBox(title, benefit, incomeTaxSaving, superTax, div293Increase, extraContrib) {
+  const isPositive = benefit >= 0;
+  const percentStr = extraContrib > 0 ? ` <span style="font-size: 0.6em; opacity: 0.8; font-weight: 600;">(${formatPercent(Math.abs(benefit) / extraContrib, 1)})</span>` : '';
+  return `
+    <div class="strategy-saving" style="flex: 1; min-width: 250px; margin-top: 0;">
+      <div class="strategy-saving__title">${title}: Overall Net TAX Benefit</div>
+      <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; margin-top: 6px; margin-bottom: var(--space-md); font-style: italic; opacity: 0.85;">
+        The pure tax savings you legally keep in your own net worth by choosing Super over a cash salary.
+      </p>
+      <div class="strategy-saving-hero" style="margin-bottom: var(--space-md); align-items: baseline;">
+        <div class="strategy-saving-hero__label">${isPositive ? 'You Save' : 'Additional Cost'}</div>
+        <div class="strategy-saving-hero__amount">${isPositive ? '' : '−'}${formatCurrency(Math.abs(benefit))}${percentStr}</div>
+      </div>
+      <div class="strategy-saving__breakdown">
+        <span>Income Tax Saving: <strong>${formatCurrency(incomeTaxSaving)}</strong></span>
+        <span>Less 15% Super Tax: <strong>${formatCurrency(superTax)}</strong></span>
+        ${div293Increase > 0 ? `<span>Less Extra Div 293: <strong>${formatCurrency(div293Increase)}</strong></span>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderVerticalBars(title, cashAmt, superAmt) {
+  const max = Math.max(cashAmt, superAmt, 1);
+  const cashHeight = Math.max(5, (cashAmt / max) * 100);
+  const superHeight = Math.max(5, (superAmt / max) * 100);
+  const diff = superAmt - cashAmt;
+  const percentStr = cashAmt > 0 ? `+${formatPercent(diff / cashAmt, 1)}` : 'Infinite';
+  
+  return `
+    <div style="flex: 1; min-width: 200px; max-width: 300px; display: flex; flex-direction: column; align-items: center;">
+      <h4 style="margin-bottom: var(--space-lg); color: var(--text-primary); font-size: 1rem;">${title}</h4>
+      <div style="display: flex; justify-content: center; align-items: flex-end; gap: 2rem; height: 160px; width: 100%; border-bottom: 2px solid var(--border-medium); padding-bottom: 8px;">
+        
+        <!-- Cash Bar -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 60px; height: 100%; justify-content: flex-end;">
+          <span style="font-size: 0.85rem; font-weight: 700; color: var(--rose);">${formatCurrency(cashAmt)}</span>
+          <div style="width: 100%; height: ${cashHeight}%; background: var(--rose); border-radius: 4px 4px 0 0; opacity: 0.85;"></div>
+        </div>
+
+        <!-- Super Bar -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 60px; height: 100%; justify-content: flex-end;">
+          <span style="font-size: 0.85rem; font-weight: 700; color: var(--emerald);">${formatCurrency(superAmt)}</span>
+          <div style="width: 100%; height: ${superHeight}%; background: var(--emerald); border-radius: 4px 4px 0 0;"></div>
+        </div>
+
+      </div>
+      
+      <div style="display: flex; justify-content: center; gap: 2rem; width: 100%; margin-top: 8px;">
+        <span style="font-size: 0.75rem; color: var(--text-muted); text-align: center; width: 60px; line-height: 1.2;">Cash<br>Required</span>
+        <span style="font-size: 0.75rem; color: var(--text-muted); text-align: center; width: 60px; line-height: 1.2;">Net Super<br>Added</span>
+      </div>
+      
+      <div style="text-align: center; margin-top: var(--space-md); padding: 4px 12px; background: rgba(16, 185, 129, 0.1); border-radius: var(--radius-sm);">
+        <span style="font-size: 0.85rem; color: var(--emerald); font-weight: 700;">${percentStr} Instant ROI</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderDiv293Box(base, opt, opt2, sg, showCol3) {
+  const baseSuper = sg;
+  const optSuper = sg + opt.concessionalExtra;
+  const opt2Super = sg + opt2.concessionalExtra;
+
+  return `
+  <div class="card--result animate-in" style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius-lg);">
+    <h3 style="margin-bottom: var(--space-md); font-size: 1.1rem; color: var(--text-primary);">Division 293 Tax Detailed Breakdown</h3>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: var(--space-md);">
+      Division 293 tax is an additional 15% tax charged on your concessional super contributions if your combined income and super exceed the $250,000 threshold.
+    </p>
+    <div style="overflow-x: auto;">
+      <table class="strategy-table" style="font-size: 0.9rem;">
+        <thead>
+          <tr>
+            <th class="strategy-table__label"></th>
+            <th class="strategy-table__col1">No extra super<br><small>Scenario 1</small></th>
+            ${opt.extraContrib > 0 ? `<th class="strategy-table__col2">Option 1<br><small>${formatCurrency(opt.extraContrib)} Extra</small></th>` : `<th class="strategy-table__col2" style="opacity: 0.5;">Option 1<br><small>With Extra Super</small></th>`}
+            ${showCol3 ? `<th class="strategy-table__col3">Option 2<br><small>${formatCurrency(opt2.extraContrib)} Extra</small></th>` : ''}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="strategy-table__label">Taxable Income for Div 293<br><small>Taxable Income + RFBA</small></td>
+            <td class="strategy-table__col1">${formatCurrency(base.div293.income - baseSuper)}</td>
+            ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.div293.income - optSuper)}</td>` : `<td class="strategy-table__col2" rowspan="6" style="background: rgba(0,0,0,0.05);"></td>`}
+            ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.div293.income - opt2Super)}</td>` : ''}
+          </tr>
+          <tr>
+            <td class="strategy-table__label">Concessional Super Contributions<br><small>Employer SG + Deductible Extra</small></td>
+            <td class="strategy-table__col1">${formatCurrency(baseSuper)}</td>
+            ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(optSuper)}</td>` : ''}
+            ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2Super)}</td>` : ''}
+          </tr>
+          <tr style="background: rgba(255,255,255,0.02);">
+            <td class="strategy-table__label" style="font-weight:600;">Combined Income for Div 293</td>
+            <td class="strategy-table__col1" style="font-weight:600;">${formatCurrency(base.div293.income)}</td>
+            ${opt.extraContrib > 0 ? `<td class="strategy-table__col2" style="font-weight:600;">${formatCurrency(opt.div293.income)}</td>` : ''}
+            ${showCol3 ? `<td class="strategy-table__col3" style="font-weight:600;">${formatCurrency(opt2.div293.income)}</td>` : ''}
+          </tr>
+          <tr>
+            <td class="strategy-table__label">Excess over $250,000 threshold</td>
+            <td class="strategy-table__col1">${formatCurrency(base.div293.excess)}</td>
+            ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.div293.excess)}</td>` : ''}
+            ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.div293.excess)}</td>` : ''}
+          </tr>
+          <tr>
+            <td class="strategy-table__label">Amount Subject to Div 293<br><small>Lesser of Excess or Concessional Super</small></td>
+            <td class="strategy-table__col1">${formatCurrency(base.div293.taxableAmount)}</td>
+            ${opt.extraContrib > 0 ? `<td class="strategy-table__col2">${formatCurrency(opt.div293.taxableAmount)}</td>` : ''}
+            ${showCol3 ? `<td class="strategy-table__col3">${formatCurrency(opt2.div293.taxableAmount)}</td>` : ''}
+          </tr>
+          <tr class="strategy-table__row--total" style="border-top: 2px solid var(--border-medium);">
+            <td class="strategy-table__label" style="color: var(--rose);">Div 293 Tax (15%)</td>
+            <td class="strategy-table__col1" style="color: var(--rose);">${formatCurrency(base.div293.tax)}</td>
+            ${opt.extraContrib > 0 ? `<td class="strategy-table__col2 strategy-table__col2--highlight" style="color: var(--rose);">${formatCurrency(opt.div293.tax)}</td>` : ''}
+            ${showCol3 ? `<td class="strategy-table__col3 strategy-table__col3--highlight" style="color: var(--rose);">${formatCurrency(opt2.div293.tax)}</td>` : ''}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function renderRetirementBox(baseProj, optProj, opt2Proj, opt, opt2, showCol3, yearsToRetire, rateStr, baseStarting, optStarting, opt2Starting, optCashProjected, opt2CashProjected, optExtraCash, opt2ExtraCash, baseTaxableIncome, inflationRate) {
+  if (yearsToRetire <= 0) {
+    return `<div class="card--result animate-in" style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius-lg);">
+      <h3 style="margin-bottom: var(--space-md); font-size: 1.1rem; color: var(--text-primary);">Projected Wealth at Retirement (Age 60)</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">You have already reached the assumed retirement age of 60. Projection is not applicable.</p>
+    </div>`;
+  }
+
+  if (opt.extraContrib <= 0 && opt2.extraContrib <= 0) {
+    return '';
+  }
+
+  function calculateCGTOnGain(indexedCostBase, cashProjected) {
+    const realGain = Math.max(0, cashProjected - indexedCostBase);
+    if (realGain <= 0) return 0;
+    
+    // Calculate marginal tax on real gain
+    const baseIncome = baseTaxableIncome || 0;
+    const taxWithGain = calculateIncomeTax(baseIncome + realGain).total + calculateMedicareLevy(baseIncome + realGain);
+    const taxWithoutGain = calculateIncomeTax(baseIncome).total + calculateMedicareLevy(baseIncome);
+    const marginalTaxOnGain = taxWithGain - taxWithoutGain;
+    
+    // Proposed rule: minimum 30% tax on real gain
+    const minTax = realGain * 0.30;
+    return Math.max(minTax, marginalTaxOnGain);
+  }
+
+  function calcIndexedCostBase(oneTimeExtraCash, inflRate) {
+    if (yearsToRetire === 0) return oneTimeExtraCash;
+    if (inflRate === 0) return oneTimeExtraCash;
+    return oneTimeExtraCash * Math.pow(1 + inflRate, yearsToRetire);
+  }
+
+  const optIndexedCostBase = calcIndexedCostBase(optExtraCash, inflationRate);
+  const optCgt = calculateCGTOnGain(optIndexedCostBase, optCashProjected);
+  const optCashFinal = optCashProjected - optCgt;
+
+  const opt2IndexedCostBase = calcIndexedCostBase(opt2ExtraCash, inflationRate);
+  const opt2Cgt = calculateCGTOnGain(opt2IndexedCostBase, opt2CashProjected);
+  const opt2CashFinal = opt2CashProjected - opt2Cgt;
+
+  let html = `
+  <div class="card--result animate-in" style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius-lg);">
+    <h3 style="margin-bottom: var(--space-md); font-size: 1.1rem; color: var(--text-primary);">Projected Wealth at Retirement (Age 60)</h3>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: var(--space-lg);">
+      Assuming an <strong>${rateStr}% annualized return</strong> over the next <strong>${yearsToRetire} years</strong>.
+    </p>`;
+
+  if (opt.extraContrib > 0) {
+    html += `
+    <h4 style="margin-bottom: var(--space-sm); color: var(--text-primary); font-size: 1rem;">Option 1: Extra ${formatCurrency(opt.extraContrib)}</h4>
+    <div style="overflow-x: auto; margin-bottom: ${showCol3 && opt2.extraContrib > 0 ? 'var(--space-xl)' : '0'};">
+      <table class="strategy-table" style="font-size: 0.9rem;">
+        <thead>
+          <tr>
+            <th class="strategy-table__label" style="width: 25%;"></th>
+            <th class="strategy-table__col2" style="width: 37.5%; text-align: right;">Option 1 Extra Total Extra Cash Required deployed in public market</th>
+            <th class="strategy-table__col3" style="width: 37.5%; text-align: right;">Option 1 Net Super Balance Added</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="strategy-table__label">Starting Balance</td>
+            <td class="strategy-table__col2" style="font-weight: 700;">${formatCurrency(optExtraCash)}</td>
+            <td class="strategy-table__col3" style="font-weight: 700;">${formatCurrency(optStarting)}</td>
+          </tr>
+          <tr style="background: rgba(255,255,255,0.02);">
+            <td class="strategy-table__label">At Age 60</td>
+            <td class="strategy-table__col2">${formatCurrency(optCashProjected)}</td>
+            <td class="strategy-table__col3">${formatCurrency(optProj)}</td>
+          </tr>
+          <tr style="background: rgba(255,255,255,0.02);">
+            <td class="strategy-table__label">Estimated CGT (Proposed Rules)</td>
+            <td class="strategy-table__col2" style="color: var(--rose);">-${formatCurrency(optCgt)}</td>
+            <td class="strategy-table__col3" style="color: var(--text-muted);">N/A (Generally Tax-Free*)</td>
+          </tr>
+          <tr style="background: rgba(255,255,255,0.02); font-weight: 600;">
+            <td class="strategy-table__label">Final Value (After CGT)</td>
+            <td class="strategy-table__col2">${formatCurrency(optCashFinal)}</td>
+            <td class="strategy-table__col3">${formatCurrency(optProj)}</td>
+          </tr>
+          <tr class="strategy-table__row--total" style="border-top: 2px solid var(--border-medium);">
+            <td class="strategy-table__label" style="font-weight: 700;">Difference</td>
+            <td colspan="2" style="font-weight: 700; color: var(--emerald); text-align: center; font-size: 1.05rem;">+${formatCurrency(optProj - optCashFinal)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  if (showCol3 && opt2.extraContrib > 0) {
+    html += `
+    <h4 style="margin-bottom: var(--space-sm); color: var(--text-primary); font-size: 1rem;">Option 2: Extra ${formatCurrency(opt2.extraContrib)}</h4>
+    <div style="overflow-x: auto;">
+      <table class="strategy-table" style="font-size: 0.9rem;">
+        <thead>
+          <tr>
+            <th class="strategy-table__label" style="width: 25%;"></th>
+            <th class="strategy-table__col2" style="width: 37.5%; text-align: right;">Option 2 Extra Total Extra Cash Required deployed in public market</th>
+            <th class="strategy-table__col3" style="width: 37.5%; text-align: right;">Option 2 Net Super Balance Added</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="strategy-table__label">Starting Balance</td>
+            <td class="strategy-table__col2" style="font-weight: 700;">${formatCurrency(opt2ExtraCash)}</td>
+            <td class="strategy-table__col3" style="font-weight: 700;">${formatCurrency(opt2Starting)}</td>
+          </tr>
+          <tr style="background: rgba(255,255,255,0.02);">
+            <td class="strategy-table__label">At Age 60</td>
+            <td class="strategy-table__col2">${formatCurrency(opt2CashProjected)}</td>
+            <td class="strategy-table__col3">${formatCurrency(opt2Proj)}</td>
+          </tr>
+          <tr style="background: rgba(255,255,255,0.02);">
+            <td class="strategy-table__label">Estimated CGT (Proposed Rules)</td>
+            <td class="strategy-table__col2" style="color: var(--rose);">-${formatCurrency(opt2Cgt)}</td>
+            <td class="strategy-table__col3" style="color: var(--text-muted);">N/A (Generally Tax-Free*)</td>
+          </tr>
+          <tr style="background: rgba(255,255,255,0.02); font-weight: 600;">
+            <td class="strategy-table__label">Final Value (After CGT)</td>
+            <td class="strategy-table__col2">${formatCurrency(opt2CashFinal)}</td>
+            <td class="strategy-table__col3">${formatCurrency(opt2Proj)}</td>
+          </tr>
+          <tr class="strategy-table__row--total" style="border-top: 2px solid var(--border-medium);">
+            <td class="strategy-table__label" style="font-weight: 700;">Difference</td>
+            <td colspan="2" style="font-weight: 700; color: var(--emerald); text-align: center; font-size: 1.05rem;">+${formatCurrency(opt2Proj - opt2CashFinal)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  html += `
+    <div style="margin-top: var(--space-md); padding: 0 var(--space-md);">
+      <div style="font-size: 0.95rem; color: var(--gold); padding: 0.5rem; border: 1px solid var(--gold); border-radius: 4px; margin-top: 1rem; background: rgba(234, 179, 8, 0.1);"><strong>* Important Notice:</strong> Projections assume the proposed 2027 Federal Budget CGT rules (cost base indexation + 30% minimum tax rate) are legislated and apply to all future growth. These rules are not yet law. Additionally, "Generally Tax-Free" assumes withdrawals are made from a taxed super fund at age 60 or older.</div>
+    </div>
+  </div>`;
+  return html;
+}
+
+
+function showResults() {
+  resultsSection.classList.add('visible');
+
+  // Staggered card animations
+  const cards = resultsSection.querySelectorAll('.card--result');
+  cards.forEach((card, index) => {
+    card.classList.remove('animate-in');
+    // Force reflow
+    void card.offsetWidth;
+    setTimeout(() => {
+      card.classList.add('animate-in');
+    }, index * 120);
+  });
+}
+
+
+// ── Form Submission ────────────────────────────
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  saveState();
+  performCalculation();
+});
+
+function showToast(title, message) {
+  if (!toastEl) return;
+  toastTitle.textContent = title;
+  toastMessage.textContent = message;
+  toastEl.setAttribute('aria-hidden', 'false');
+  
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(hideToast, 12000); // Auto-hide after 12 seconds
+}
+
+function hideToast() {
+  if (!toastEl) return;
+  toastEl.setAttribute('aria-hidden', 'true');
+}
+
+if (toastClose) {
+  toastClose.addEventListener('click', hideToast);
+}
+
+// ── Initial Render ─────────────────────────────
+(async function init() {
+  await loadState();
+  performCalculation();
+})();
+
+// ── Clear Data Functionality ───────────────────
+const clearDataBtn = document.getElementById('clearDataBtn');
+if (clearDataBtn) {
+  clearDataBtn.addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear all your saved financial data and reset the calculator?')) {
+      localStorage.removeItem(STATE_KEY);
+      localStorage.removeItem(THEME_KEY);
+      window.location.reload();
+    }
+  });
+}
