@@ -1,17 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mortgage Calculator</title>
-  <meta name="description" content="Calculate your estimated home loan repayments, total interest, and amortization schedule.">
+  <meta name="description"
+    content="Calculate your estimated home loan repayments, total interest, and amortization schedule.">
   <link rel="stylesheet" href="styles.css">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self';">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self';">
   <script src="theme-init.js"></script>
 </head>
+
 <body>
   <!-- Alpha Disclaimer Banner -->
-  <div style="background-color: rgba(245, 158, 11, 0.15); border-bottom: 1px solid rgba(245, 158, 11, 0.3); color: #fcd34d; text-align: center; padding: 10px; font-size: 0.85rem; font-weight: 600; position: relative; z-index: 100;">
+  <div
+    style="background-color: rgba(245, 158, 11, 0.15); border-bottom: 1px solid rgba(245, 158, 11, 0.3); color: #fcd34d; text-align: center; padding: 10px; font-size: 0.85rem; font-weight: 600; position: relative; z-index: 100;">
     ⚠️ ALPHA VERSION: This suite is in early testing and may contain errors. Do not use for formal financial planning.
   </div>
   <!-- Animated background -->
@@ -19,19 +24,37 @@
   <div class="bg-glow bg-glow--2"></div>
   <div class="bg-glow bg-glow--3"></div>
 
-  <div class="container">
+  <div class="container mortgage-container">
     <header class="header">
       <div class="header__badge">Home Loans</div>
       <h1 class="header__title">Mortgage <span>Calculator</span></h1>
-      <p class="header__subtitle">Calculate your estimated home loan repayments, including the impact of offset accounts and extra repayments.</p>
+      <p class="header__subtitle">Calculate your estimated home loan repayments, including the impact of offset accounts
+        and extra repayments.</p>
     </header>
 
-    <main>
+    <style>
+      .mortgage-container {
+        max-width: 3200px !important;
+        width: 98% !important;
+      }
+
+      @media (min-width: 1024px) {
+        .mortgage-layout {
+          grid-template-columns: 1fr 2.6fr !important;
+        }
+      }
+    </style>
+
+    <main class="mortgage-layout">
       <!-- Input Section -->
       <section class="card card--input">
         <div class="card__header">
           <div class="card__icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
           </div>
           <h2 class="card__title">Loan Details</h2>
         </div>
@@ -41,7 +64,8 @@
             <label class="field__label" for="loanAmount">Loan Amount</label>
             <div class="field__input-wrap">
               <span class="field__prefix">$</span>
-              <input type="number" id="loanAmount" class="field__input" placeholder="e.g. 500000" required min="0" step="1">
+              <input type="number" id="loanAmount" class="field__input" placeholder="e.g. 500000" required min="0"
+                step="1">
             </div>
           </div>
 
@@ -49,7 +73,8 @@
             <label class="field__label" for="interestRate">Interest Rate (p.a.)</label>
             <div class="field__input-wrap">
               <span class="field__prefix">%</span>
-              <input type="number" id="interestRate" class="field__input" placeholder="e.g. 6.5" required min="0" max="100" step="0.01">
+              <input type="number" id="interestRate" class="field__input" placeholder="e.g. 6.5" required min="0"
+                max="100" step="0.01">
             </div>
           </div>
 
@@ -57,7 +82,8 @@
             <label class="field__label" for="loanTerm">Loan Term</label>
             <div class="field__input-wrap">
               <span class="field__prefix">Yrs</span>
-              <input type="number" id="loanTerm" class="field__input" placeholder="e.g. 30" required min="1" max="50" step="1" value="30">
+              <input type="number" id="loanTerm" class="field__input" placeholder="e.g. 30" required min="1" max="50"
+                step="1" value="30">
             </div>
           </div>
 
@@ -70,18 +96,24 @@
             </select>
           </div>
 
-          <div class="field" style="margin-top: var(--space-lg); border-top: 1px solid var(--border-subtle); padding-top: var(--space-md);">
+          <div class="field"
+            style="margin-top: var(--space-lg); border-top: 1px solid var(--border-subtle); padding-top: var(--space-md);">
             <label class="field__label" for="offsetBalance">Offset Account Balance (Optional)</label>
             <div class="field__input-wrap">
               <span class="field__prefix">$</span>
-              <input type="number" id="offsetBalance" class="field__input" placeholder="e.g. 50000" min="0" step="1" value="0">
+              <input type="number" id="offsetBalance" class="field__input" placeholder="e.g. 50000" min="0" step="1"
+                value="0">
             </div>
             <span class="field__helper">Money here reduces the principal that incurs interest.</span>
           </div>
 
           <button type="submit" class="btn-calculate" style="margin-top: var(--space-xl);">
             <span class="btn-calculate__text">Calculate Repayments</span>
-            <span class="btn-calculate__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>
+            <span class="btn-calculate__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg></span>
           </button>
         </form>
       </section>
@@ -92,9 +124,10 @@
           <div class="total-hero">
             <div class="total-hero__label" id="repaymentLabel">Estimated Monthly Repayment</div>
             <div class="total-hero__amount" id="repaymentDisplay" style="color: var(--accent);">$0</div>
-            <div class="total-hero__rate">Interest Saved (Offset): <span id="offsetSavingsDisplay" style="color: var(--green);">$0</span></div>
+            <div class="total-hero__rate">Interest Saved (Offset): <span id="offsetSavingsDisplay"
+                style="color: var(--green);">$0</span></div>
           </div>
-          
+
           <div class="total-grid">
             <div class="total-grid__item">
               <div class="total-grid__label">Total Interest Payable</div>
@@ -116,15 +149,55 @@
               <span class="result-line__value" id="termDisplay">0 Years</span>
             </div>
           </div>
+
+          <!-- Amortization Graph Container -->
+          <div style="margin-top: var(--space-2xl);">
+            <h3 style="font-size: 1.1rem; margin-bottom: var(--space-md); color: var(--text-main);">Amortization
+              Schedule (Yearly)</h3>
+
+            <div style="display: flex; align-items: stretch; height: 300px;">
+              <!-- Y Axis -->
+              <div id="yAxis"
+                style="display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; padding-right: 8px; width: 60px; font-size: 0.75rem; color: var(--text-muted); border-right: 1px solid var(--border-medium); padding-top: 20px;">
+                <!-- Dynamically populated -->
+              </div>
+
+              <!-- Graph Area -->
+              <div style="flex: 1; display: flex; flex-direction: column;">
+                <div id="graphContainer"
+                  style="display: flex; align-items: flex-end; flex: 1; width: 100%; gap: 2px; border-bottom: 1px solid var(--border-medium); padding-top: 20px;">
+                  <!-- Bars will be dynamically inserted here -->
+                </div>
+
+                <!-- X Axis -->
+                <div id="xAxis"
+                  style="display: flex; width: 100%; margin-top: 4px; font-size: 0.75rem; color: var(--text-muted); position: relative; height: 20px;">
+                  <!-- Dynamically populated -->
+                </div>
+              </div>
+            </div>
+
+            <div
+              style="display: flex; justify-content: center; gap: var(--space-md); margin-top: var(--space-md); font-size: 0.8rem;">
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <div style="width: 12px; height: 12px; background-color: var(--rose);"></div> Interest
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <div style="width: 12px; height: 12px; background-color: var(--accent);"></div> Principal
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </main>
-    
+
     <div style="text-align: center; margin-top: var(--space-2xl);">
-        <a href="index.html" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">&larr; Back to Dashboard</a>
+      <a href="index.html" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">&larr; Back to
+        Dashboard</a>
     </div>
   </div>
 
   <script src="mortgage.js"></script>
 </body>
+
 </html>

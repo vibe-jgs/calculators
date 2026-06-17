@@ -85,25 +85,9 @@
 
     </main>
 
-    <main style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-lg); margin-top: var(--space-lg);">
-      <!-- Option 3: Wizard -->
-      <a href="wizard.html" style="text-decoration: none; color: inherit; display: flex;">
-        <div class="card card--result portal-card" style="flex: 1; border: 1px solid var(--border-medium);">
-          <div class="card__header" style="margin-bottom: var(--space-md);">
-            <div class="card__icon" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-            </div>
-            <h2 class="card__title" style="font-size: 1.25rem;">Super Wealth Wizard</h2>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: var(--space-lg);">A guided, step-by-step interactive questionnaire to calculate your tax liabilities and super strategies.</p>
-          <div style="color: #a855f7; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; margin-top: auto;">
-            Start Wizard <span style="margin-left: 4px;">&rarr;</span>
-          </div>
-        </div>
-      </a>
-
-      <!-- Option 4: Mortgage Calculator -->
-      <a href="mortgage.html" style="text-decoration: none; color: inherit; display: flex;">
+    <!-- Option 3: Mortgage Calculator (Centered) -->
+    <main style="display: flex; justify-content: center; margin-top: var(--space-lg);">
+      <a href="mortgage.html" style="text-decoration: none; color: inherit; display: flex; width: 100%; max-width: 500px;">
         <div class="card card--input portal-card" style="flex: 1; border: 1px solid #22c55e;">
           <div class="card__header" style="margin-bottom: var(--space-md);">
             <div class="card__icon" style="background: rgba(34, 197, 94, 0.1); color: #22c55e;">
@@ -114,6 +98,24 @@
           <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: var(--space-lg);">Calculate your estimated home loan repayments, including the impact of offset accounts and extra repayments.</p>
           <div style="color: #22c55e; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; margin-top: auto;">
             Calculate Mortgage <span style="margin-left: 4px;">&rarr;</span>
+          </div>
+        </div>
+      </a>
+    </main>
+
+    <!-- Option 4: Wizard -->
+    <main style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-lg); margin-top: var(--space-lg);">
+      <a href="wizard.html" style="text-decoration: none; color: inherit; display: flex; grid-column: 1 / -1;">
+        <div class="card card--result portal-card" style="flex: 1; border: 1px solid var(--border-medium);">
+          <div class="card__header" style="margin-bottom: var(--space-md);">
+            <div class="card__icon" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+            </div>
+            <h2 class="card__title" style="font-size: 1.25rem;">Super Wealth Wizard</h2>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: var(--space-lg);">A guided, step-by-step interactive questionnaire to calculate your tax liabilities and super strategies.</p>
+          <div style="color: #a855f7; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; margin-top: auto;">
+            Start Wizard <span style="margin-left: 4px;">&rarr;</span>
           </div>
         </div>
       </a>

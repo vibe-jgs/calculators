@@ -41,6 +41,10 @@ function calculateMortgage() {
   let totalInterestWithOffset = 0;
   let actualPeriods = 0;
 
+  let yearlyData = [];
+  let currentYearInterest = 0;
+  let currentYearPrincipal = 0;
+
   for (let i = 0; i < n; i++) {
     if (balance <= 0) break;
     
@@ -58,6 +62,19 @@ function calculateMortgage() {
     
     balance -= principalPaid;
     actualPeriods++;
+
+    currentYearInterest += interestCharged;
+    currentYearPrincipal += principalPaid;
+
+    // Save yearly data at the end of each year or when loan is paid off
+    if ((i + 1) % periodsPerYear === 0 || balance <= 0) {
+      yearlyData.push({
+        interest: currentYearInterest,
+        principal: currentYearPrincipal
+      });
+      currentYearInterest = 0;
+      currentYearPrincipal = 0;
+    }
   }
 
   const offsetSavings = Math.max(0, totalInterestStandard - totalInterestWithOffset);
@@ -87,6 +104,82 @@ function calculateMortgage() {
       document.getElementById('termDisplay').innerHTML = `${(actualPeriods / periodsPerYear).toFixed(1)} Years <span style="color: var(--green); font-size: 0.8em; margin-left: 8px;">(Saved ${yearsSaved.toFixed(1)} yrs)</span>`;
   } else {
       document.getElementById('termDisplay').innerText = `${loanTermYears} Years`;
+  }
+
+  // Render Graph
+  const graphContainer = document.getElementById('graphContainer');
+  const yAxis = document.getElementById('yAxis');
+  const xAxis = document.getElementById('xAxis');
+
+  graphContainer.innerHTML = ''; // clear previous
+  yAxis.innerHTML = '';
+  xAxis.innerHTML = '';
+  
+  if (yearlyData.length > 0) {
+    let maxYearlyPayment = 0;
+    yearlyData.forEach(data => {
+      if (data.interest + data.principal > maxYearlyPayment) {
+        maxYearlyPayment = data.interest + data.principal;
+      }
+    });
+
+    // Render Y-Axis
+    const ySteps = 4;
+    for (let i = ySteps; i >= 0; i--) {
+      const val = maxYearlyPayment * (i / ySteps);
+      let labelVal = val >= 1000 ? `$${(val/1000).toFixed(0)}k` : `$${val.toFixed(0)}`;
+      const label = document.createElement('div');
+      label.innerText = labelVal;
+      yAxis.appendChild(label);
+    }
+
+    yearlyData.forEach((data, index) => {
+      const barCol = document.createElement('div');
+      barCol.style.flex = '1';
+      barCol.style.display = 'flex';
+      barCol.style.flexDirection = 'column';
+      barCol.style.justifyContent = 'flex-end';
+      barCol.style.height = '100%';
+      barCol.style.minWidth = '2px'; // Prevent squishing too much
+      barCol.title = `Year ${index + 1}: Interest ${formatCurrency(data.interest)}, Principal ${formatCurrency(data.principal)}`;
+
+      const interestHeight = (data.interest / maxYearlyPayment) * 100;
+      const principalHeight = (data.principal / maxYearlyPayment) * 100;
+
+      if (interestHeight > 0) {
+        const interestBar = document.createElement('div');
+        interestBar.style.height = `${interestHeight}%`;
+        interestBar.style.backgroundColor = 'var(--rose)';
+        interestBar.style.width = '100%';
+        barCol.appendChild(interestBar);
+      }
+
+      if (principalHeight > 0) {
+        const principalBar = document.createElement('div');
+        principalBar.style.height = `${principalHeight}%`;
+        principalBar.style.backgroundColor = 'var(--accent)';
+        principalBar.style.width = '100%';
+        barCol.appendChild(principalBar);
+      }
+
+      // Add a tiny gap or border between years for visual separation on hover
+      barCol.addEventListener('mouseenter', () => barCol.style.opacity = '0.8');
+      barCol.addEventListener('mouseleave', () => barCol.style.opacity = '1');
+
+      graphContainer.appendChild(barCol);
+
+      // Render X-Axis labels
+      const year = index + 1;
+      if (year === 1 || year % 5 === 0 || year === yearlyData.length) {
+        const xLabel = document.createElement('div');
+        xLabel.innerText = year;
+        xLabel.style.position = 'absolute';
+        xLabel.style.left = `calc(${((index + 0.5) / yearlyData.length) * 100}% - 10px)`;
+        xLabel.style.width = '20px';
+        xLabel.style.textAlign = 'center';
+        xAxis.appendChild(xLabel);
+      }
+    });
   }
 }
 
