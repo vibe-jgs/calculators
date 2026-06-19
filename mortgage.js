@@ -35,8 +35,31 @@ function calculateMortgage() {
     totalInterestStandard = 0;
   }
 
-  // 2. Calculate Actual Scenario (With Offset)
-  // Assuming the offset balance stays constant for simplicity
+  // ── Baseline Amortization Loop (NO offset) ────────────────────────────
+  // We run a full simulation rather than using (repayment × n) - principal
+  // so the baseline is always accurate, regardless of term length.
+  let baselineBalance = loanAmount;
+  let totalInterestBaseline = 0;
+
+  for (let i = 0; i < n; i++) {
+    if (baselineBalance <= 0) break;
+
+    let interestCharged = baselineBalance * r;
+    let principalPaid = standardRepayment - interestCharged;
+
+    // Handle the final (smaller) payment
+    if (baselineBalance + interestCharged < standardRepayment) {
+      totalInterestBaseline += baselineBalance * r;
+      break;
+    }
+
+    totalInterestBaseline += interestCharged;
+    baselineBalance -= principalPaid;
+  }
+
+  // ── Offset Amortization Loop (WITH offset) ─────────────────────────────
+  // Offset reduces the interest-bearing balance each period.
+  // The minimum repayment stays the same, so more goes to principal.
   let balance = loanAmount;
   let totalInterestWithOffset = 0;
   let actualPeriods = 0;
@@ -47,20 +70,21 @@ function calculateMortgage() {
 
   for (let i = 0; i < n; i++) {
     if (balance <= 0) break;
-    
-    // Interest is charged on (balance - offsetBalance), floored at 0
-    let interestCharged = Math.max(0, (balance - offsetBalance) * r);
+
+    // Interest accrues only on (balance − offsetBalance), minimum $0
+    let effectiveBalance = Math.max(0, balance - offsetBalance);
+    let interestCharged = effectiveBalance * r;
     totalInterestWithOffset += interestCharged;
-    
-    // The repayment goes to interest first, then principal
+
     let principalPaid = standardRepayment - interestCharged;
-    
-    // If the standard repayment is more than enough to clear the balance + interest
+
+    // Handle the final (smaller) payment
     if (balance + interestCharged < standardRepayment) {
       principalPaid = balance;
     }
-    
+
     balance -= principalPaid;
+    if (balance < 0) balance = 0;
     actualPeriods++;
 
     currentYearInterest += interestCharged;
@@ -77,7 +101,8 @@ function calculateMortgage() {
     }
   }
 
-  const offsetSavings = Math.max(0, totalInterestStandard - totalInterestWithOffset);
+  // Savings = true baseline minus the with-offset interest
+  const offsetSavings = Math.max(0, totalInterestBaseline - totalInterestWithOffset);
   const totalCost = loanAmount + totalInterestWithOffset;
 
   // Map frequency to label
